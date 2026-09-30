@@ -6,7 +6,9 @@ on:
       - 'main'
       - 'master'
     paths:
-      - 'lean-toolchain'
+      # NOTE: lean-release-tag@v1 reads `lean-toolchain` at the repo root only and has no
+      # directory option, so with the package in lean/ this job runs but creates no tags.
+      - 'lean/lean-toolchain'
 
 jobs:
   lean-release-tag:
