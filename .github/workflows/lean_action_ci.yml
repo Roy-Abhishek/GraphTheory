@@ -5,11 +5,19 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read # Read access to repository contents
-  pages: write # Write access to GitHub Pages
-  id-token: write # Write access to ID tokens
+
+# NOTE: the template's `leanprover-community/docgen-action@v1` step (API docs + GitHub Pages
+# deploy) was removed: it failed every `push` run and cannot succeed in this repo.
+#   - Its docs build (build_docs.sh) runs at the repo root and reads `lean-toolchain` there;
+#     the package lives in lean/, and `lake_package_directory` only affects metadata parsing.
+#   - GitHub Pages is not enabled, so its deploy step 404s (the original root-layout runs
+#     built Mathlib docs for ~2 h and then failed there).
+#   - All of its docs steps are gated on `push`, which is why pull_request runs always passed.
+# To bring docs back: enable Pages (Settings > Pages > Source: GitHub Actions), restore
+# `pages: write` and `id-token: write` above, and add the docgen step after lean-action once
+# the docs build can be pointed at lean/.
 
 jobs:
   build:
@@ -20,6 +28,3 @@ jobs:
       - uses: leanprover/lean-action@v1
         with:
           lake-package-directory: lean
-      - uses: leanprover-community/docgen-action@v1
-        with:
-          lake_package_directory: lean
