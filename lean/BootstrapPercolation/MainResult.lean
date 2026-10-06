@@ -38,10 +38,24 @@ def mdist (u v : Cell d n) : ℕ :=
 /-- Two cells are grid-adjacent iff they differ by exactly one unit step. -/
 def adjacent (u v : Cell d n) : Prop := mdist u v = 1
 
+/-- `mdist` is symmetric. -/
+lemma mdist_comm (u v : Cell d n) : mdist u v = mdist v u := by
+  unfold mdist
+  apply Finset.sum_congr rfl
+  intro i _
+  have h : ((u i : ℕ) : ℤ) - ((v i : ℕ) : ℤ)
+      = -(((v i : ℕ) : ℤ) - ((u i : ℕ) : ℤ)) := by ring
+  rw [h, Int.natAbs_neg]
+
+/-- `adjacent` is symmetric. -/
+lemma adjacent_symm {u v : Cell d n} (h : adjacent u v) : adjacent v u := by
+  unfold adjacent at h ⊢
+  rwa [mdist_comm u v] at h
+
 /-- One synchronous round of `r = d` bootstrap percolation: an uninfected
 cell joins the infected set once at least `d` of its neighbours are
 infected. -/
-def step (A : Finset (Cell d n)) : Finset (Cell d n) :=
+noncomputable def step (A : Finset (Cell d n)) : Finset (Cell d n) :=
   A ∪ Finset.univ.filter
     (fun v => d ≤ (Finset.univ.filter (fun u => adjacent u v ∧ u ∈ A)).card)
 
@@ -50,7 +64,7 @@ lemma subset_step (A : Finset (Cell d n)) : A ⊆ step A :=
   fun u hu => Finset.mem_union_left _ hu
 
 /-- The infected set after `t` synchronous rounds. -/
-def afterRounds (A : Finset (Cell d n)) : ℕ → Finset (Cell d n)
+noncomputable def afterRounds (A : Finset (Cell d n)) : ℕ → Finset (Cell d n)
   | 0 => A
   | (t + 1) => step (afterRounds A t)
 
@@ -90,7 +104,7 @@ theorem certificate (A : Finset (Cell d n)) (L : Cell d n → ℕ)
         intro v hv
         rw [Finset.mem_filter] at hv ⊢
         have hvlt : L v < L u := hv.2.2
-        exact ⟨hv.1, ih v (by omega)⟩
+        exact ⟨hv.1, adjacent_symm hv.2.1, ih v (by omega)⟩
 
 /-- Corollary: with a certificate `L`, every cell is infected by round
 `L u` - no need to first pick a time `t`. -/
