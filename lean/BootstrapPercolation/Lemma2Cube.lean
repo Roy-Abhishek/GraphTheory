@@ -420,12 +420,12 @@ lemma three_smaller_neighbours_face_neg (w : CubeCell k) (i0 j1 j2 : Fin 3)
       refine ⟨?_, ?_, ?_, adjacent_decAt k w j1 hj1dec, by omega⟩
       · have e := coord_decAt_self k w j1 hj1dec; push_cast; omega
       · rw [coord_decAt_other k w j1 hj1dec j2 h12.symm]; push_cast; omega
-      · rw [coord_decAt_other k w j1 hj1dec i0 (Ne.symm h01)]; exact hpin
+      · rw [coord_decAt_other k w j1 hj1dec i0 (h01)]; exact hpin
     · rw [if_neg (by omega), if_pos rfl, dif_pos hj2dec]
       refine ⟨?_, ?_, ?_, adjacent_decAt k w j2 hj2dec, by omega⟩
       · rw [coord_decAt_other k w j2 hj2dec j1 h12]; push_cast; omega
       · have e := coord_decAt_self k w j2 hj2dec; push_cast; omega
-      · rw [coord_decAt_other k w j2 hj2dec i0 (Ne.symm h02)]; exact hpin
+      · rw [coord_decAt_other k w j2 hj2dec i0 (h02)]; exact hpin
     · have hj1inc : (w j1 : ℕ) + 1 < n k := by
         have hcj1 : coord k w j1 = ((w j1 : ℕ) : ℤ) - (m k : ℤ) := rfl
         unfold n; omega
@@ -433,7 +433,7 @@ lemma three_smaller_neighbours_face_neg (w : CubeCell k) (i0 j1 j2 : Fin 3)
       refine ⟨?_, ?_, ?_, adjacent_incAt k w j1 hj1inc, by omega⟩
       · have e := coord_incAt_self k w j1 hj1inc; push_cast; omega
       · rw [coord_incAt_other k w j1 hj1inc j2 h12.symm]; push_cast; omega
-      · rw [coord_incAt_other k w j1 hj1inc i0 (Ne.symm h01)]; exact hpin
+      · rw [coord_incAt_other k w j1 hj1inc i0 (h01)]; exact hpin
     · have hj2inc : (w j2 : ℕ) + 1 < n k := by
         have hcj2 : coord k w j2 = ((w j2 : ℕ) : ℤ) - (m k : ℤ) := rfl
         unfold n; omega
@@ -441,7 +441,7 @@ lemma three_smaller_neighbours_face_neg (w : CubeCell k) (i0 j1 j2 : Fin 3)
       refine ⟨?_, ?_, ?_, adjacent_incAt k w j2 hj2inc, by omega⟩
       · rw [coord_incAt_other k w j2 hj2inc j1 h12]; push_cast; omega
       · have e := coord_incAt_self k w j2 hj2inc; push_cast; omega
-      · rw [coord_incAt_other k w j2 hj2inc i0 (Ne.symm h02)]; exact hpin
+      · rw [coord_incAt_other k w j2 hj2inc i0 (h02)]; exact hpin
   have hinj : Set.InjOn (faceNegImage k w j1 j2 a b) (neighbors a b) := by
     intro p hp q hq heq
     obtain ⟨hp1, hp2, _, _, _⟩ := hkey p hp
@@ -467,9 +467,10 @@ lemma three_smaller_neighbours_face_neg (w : CubeCell k) (i0 j1 j2 : Fin 3)
         have e1 : ((m k : ℤ) - coord k (faceNegImage k w j1 j2 a b p) j1).toNat = p.1 := by omega
         have e2 : ((m k : ℤ) - coord k (faceNegImage k w j1 j2 a b p) j2).toNat = p.2 := by omega
         rw [e1, e2]
+      have hivT : InTri k (faceNegImage k w j1 j2 a b p) := Or.inl ⟨i0, hci0, hSigpos⟩
       have hLv : L k (faceNegImage k w j1 j2 a b p) = ell (mOf k) p := by
         unfold L
-        rw [if_pos (Or.inl ⟨i0, hci0, hSigpos⟩), htcv, hmeq]
+        rw [if_pos hivT, htcv, hmeq]
       rw [hLv]
       omega
     · have hSigeq0 : Sigma k (faceNegImage k w j1 j2 a b p) = 0 := by
