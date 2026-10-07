@@ -246,6 +246,7 @@ theorem three_smaller_neighbours :
           rw [step, show (((a - 1) / 2 - 1, b / 2) : ℕ × ℕ) = (i - 1, j) from
                 Prod.ext (by omega) (by omega),
               show (((a - 1) / 2, b / 2) : ℕ × ℕ) = (i, j) from Prod.ext (by omega) (by omega)]
+          omega
         have hRight : ell (mOf (k + 1)) (a + 1, b) =
             1 + min (2 * ell (mOf k) (i, j)) (2 * ell (mOf k) (i + 1, j)) := by
           have step : ell (mOf (k + 1)) (a + 1, b) =
@@ -263,6 +264,7 @@ theorem three_smaller_neighbours :
           rw [step, show ((a / 2, (b - 1) / 2 - 1) : ℕ × ℕ) = (i, j - 1) from
                 Prod.ext (by omega) (by omega),
               show ((a / 2, (b - 1) / 2) : ℕ × ℕ) = (i, j) from Prod.ext (by omega) (by omega)]
+          omega
         have hUp : ell (mOf (k + 1)) (a, b + 1) =
             1 + min (2 * ell (mOf k) (i, j)) (2 * ell (mOf k) (i, j + 1)) := by
           have step : ell (mOf (k + 1)) (a, b + 1) =
@@ -314,8 +316,8 @@ theorem three_smaller_neighbours :
           rcases hp.1 with rfl | rfl | ⟨hpi, rfl⟩ | ⟨hpj, rfl⟩ <;>
             rcases hq.1 with rfl | rfl | ⟨hqi, rfl⟩ | ⟨hqj, rfl⟩ <;>
             simp only [hfdef] at hpq <;>
-            simp only [Prod.mk.injEq] <;>
             split_ifs at hpq <;>
+            simp only [Prod.mk.injEq] at hpq ⊢ <;>
             omega
         have hsub : ((neighbors i j).filter
               (fun v => ell (mOf k) v < ell (mOf k) (i, j))).image f ⊆
