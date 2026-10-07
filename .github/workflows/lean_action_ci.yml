@@ -72,12 +72,21 @@ jobs:
           python3 - << 'PYEOF'
           import re
           with open('/tmp/build.log') as f:
-              text = f.read()
-          blocks = re.split(r'\n(?=\S)', text)
-          err_blocks = [b.strip() for b in blocks if re.search(r'\berror:', b)]
-          if not err_blocks:
-              err_blocks = [text[-3000:]]
-          for b in err_blocks[:8]:
+              lines = f.readlines()
+          # A new top-level diagnostic starts at "error: ..." or "<path>.lean:L:C: error: ..."
+          # at column 0. Anything between one of these and the next one - including
+          # unindented "nested error" continuation lines, which the old (?=\S) line-boundary
+          # split used to treat as a separate, error:-less block and silently drop - is part
+          # of the SAME error and must stay attached to it.
+          start_re = re.compile(r'^(?:error:|\S+\.lean:\d+:\d+:\s*error:)')
+          starts = [i for i, l in enumerate(lines) if start_re.match(l)]
+          blocks = []
+          for idx, start in enumerate(starts):
+              end = starts[idx + 1] if idx + 1 < len(starts) else len(lines)
+              blocks.append(''.join(lines[start:end]).rstrip())
+          if not blocks:
+              blocks = [''.join(lines[-100:])]
+          for b in blocks[:8]:
               b = b[:3500]
               safe = b.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
               print(f"::error::{safe}")
