@@ -19,11 +19,12 @@ a black box instead of re-deriving the triangle's recursion in 3D.
 `L` is the single witness function for the whole cube: `|Σ|` off `Tri`, `ell m (triCoord u)` on
 `Tri`. `Aset` is the claimed minimal percolating set: `H` together with the zero-locus of `ell m`
 (i.e. `Pmem m`, via `triCoord`) on each triangle. Lemma 2's three claims - `L = 0` exactly on
-`Aset`, `L ≤ 3m` everywhere (with equality at the corners), and every positive-`L` cell has ≥3
-in-cube neighbours of strictly smaller `L` - are stated below as the next proof targets (`sorry`
-for now); together with `BootstrapPercolation.percolates_of_certificate`/`afterRounds_sup_eq_univ`
-from `MainResult.lean` (specialised to `d = 3`, `A = Aset k`), they are exactly what the headline
-theorem's upper bound `T(Aₙ) ≤ 3m` needs. -/
+`Aset` (`L_eq_zero_iff`), `L ≤ 3m` everywhere with equality at the corners (`L_le_three_m`), and
+every positive-`L` cell has ≥3 in-cube neighbours of strictly smaller `L`
+(`three_smaller_neighbours`) - are all proved below; together with
+`BootstrapPercolation.percolates_of_certificate`/`afterRounds_sup_eq_univ` from `MainResult.lean`
+(specialised to `d = 3`, `A = Aset k`), they are exactly what the headline theorem's upper bound
+`T(Aₙ) ≤ 3m` needs. -/
 
 namespace BootstrapPercolation.Lemma2Cube
 
@@ -623,11 +624,65 @@ The off-`Tri` case (`notes/log.md`: "its three neighbours `u − eᵢ` exist and
 and `L_le_sigma_natAbs` - no need to track which face a shifted neighbour lands on, since that
 lemma bounds `L` by `|Σ|` uniformly on both sides of `Tri`'s boundary. The on-`Tri` case
 (`notes/log.md`'s Lemma 1(ii) via `triCoord`, plus the hypotenuse-crosses-into-`H` sub-case) is
-the other, harder half, still `sorry`. -/
+handled by instantiating the per-face helpers `three_smaller_neighbours_face_neg`/`_face_pos`
+once for each of the six (pinned axis, sign) combinations. -/
 theorem three_smaller_neighbours (u : CubeCell k) (hu : L k u ≠ 0) :
     3 ≤ (Finset.univ.filter (fun v => adjacent u v ∧ L k v < L k u)).card := by
   by_cases hTri : InTri k u
-  · sorry
+  · have hidx : ∀ j : Fin 3, j = 0 ∨ j = 1 ∨ j = 2 := by decide
+    rcases hTri with ⟨i, hi, hs⟩ | ⟨i, hi, hs⟩
+    · rcases hidx i with hi3 | hi3 | hi3 <;> subst hi3
+      · exact three_smaller_neighbours_face_neg k u 0 1 2 (by decide) (by decide) (by decide)
+          (fun v => by unfold Sigma; ring)
+          (fun v hv hsv => by unfold triCoord; rw [if_pos hsv, if_pos hv])
+          hi hs hu
+      · exact three_smaller_neighbours_face_neg k u 1 0 2 (by decide) (by decide) (by decide)
+          (fun v => by unfold Sigma; ring)
+          (fun v hv hsv => by
+            have hb0 := coord_bounds k v 0
+            have hb2 := coord_bounds k v 2
+            have hSigma_def : Sigma k v = coord k v 0 + coord k v 1 + coord k v 2 := rfl
+            unfold triCoord
+            rw [if_pos hsv, if_neg (by omega : coord k v 0 ≠ -(m k : ℤ)), if_pos hv])
+          hi hs hu
+      · exact three_smaller_neighbours_face_neg k u 2 0 1 (by decide) (by decide) (by decide)
+          (fun v => by unfold Sigma; ring)
+          (fun v hv hsv => by
+            have hb0 := coord_bounds k v 0
+            have hb1 := coord_bounds k v 1
+            have hSigma_def : Sigma k v = coord k v 0 + coord k v 1 + coord k v 2 := rfl
+            unfold triCoord
+            rw [if_pos hsv, if_neg (by omega : coord k v 0 ≠ -(m k : ℤ)),
+                if_neg (by omega : coord k v 1 ≠ -(m k : ℤ))])
+          hi hs hu
+    · rcases hidx i with hi3 | hi3 | hi3 <;> subst hi3
+      · exact three_smaller_neighbours_face_pos k u 0 1 2 (by decide) (by decide) (by decide)
+          (fun v => by unfold Sigma; ring)
+          (fun v hv hsv => by
+            unfold triCoord
+            rw [if_neg (by omega : ¬ Sigma k v > 0), if_pos hv])
+          hi hs hu
+      · exact three_smaller_neighbours_face_pos k u 1 0 2 (by decide) (by decide) (by decide)
+          (fun v => by unfold Sigma; ring)
+          (fun v hv hsv => by
+            have hb0 := coord_bounds k v 0
+            have hb2 := coord_bounds k v 2
+            have hSigma_def : Sigma k v = coord k v 0 + coord k v 1 + coord k v 2 := rfl
+            unfold triCoord
+            rw [if_neg (by omega : ¬ Sigma k v > 0),
+                if_neg (by omega : coord k v 0 ≠ (m k : ℤ)), if_pos hv])
+          hi hs hu
+      · exact three_smaller_neighbours_face_pos k u 2 0 1 (by decide) (by decide) (by decide)
+          (fun v => by unfold Sigma; ring)
+          (fun v hv hsv => by
+            have hb0 := coord_bounds k v 0
+            have hb1 := coord_bounds k v 1
+            have hSigma_def : Sigma k v = coord k v 0 + coord k v 1 + coord k v 2 := rfl
+            unfold triCoord
+            rw [if_neg (by omega : ¬ Sigma k v > 0),
+                if_neg (by omega : coord k v 0 ≠ (m k : ℤ)),
+                if_neg (by omega : coord k v 1 ≠ (m k : ℤ))])
+          hi hs hu
   · have hLu : L k u = (Sigma k u).natAbs := by unfold L; rw [if_neg hTri]
     have hsne : Sigma k u ≠ 0 := by intro h; apply hu; rw [hLu, h]; decide
     rcases lt_or_gt_of_ne hsne with hneg | hpos
