@@ -33,7 +33,7 @@ def ell (m : ℕ) (p : ℕ × ℕ) : ℕ :=
         1 + min (2 * ell m₀ (a / 2, b / 2 - 1)) (2 * ell m₀ (a / 2, b / 2))
     else
       1 + min (2 * ell m₀ (a / 2 - 1, b / 2)) (2 * ell m₀ (a / 2, b / 2))
-termination_by m => m
+termination_by m p => m
 decreasing_by all_goals omega
 
 -- Sanity check against the hand-worked base case in the notes:
