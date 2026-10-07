@@ -355,7 +355,7 @@ theorem three_smaller_neighbours (u : CubeCell k) (hu : L k u ≠ 0) :
   by_cases hTri : InTri k u
   · sorry
   · have hLu : L k u = (Sigma k u).natAbs := by unfold L; rw [if_neg hTri]
-    have hsne : Sigma k u ≠ 0 := by intro h; apply hu; rw [hLu, h]
+    have hsne : Sigma k u ≠ 0 := by intro h; apply hu; rw [hLu, h]; decide
     rcases lt_or_gt_of_ne hsne with hneg | hpos
     · have h0 : (u 0 : ℕ) + 1 < n k := by
         by_contra hc; push_neg at hc
@@ -412,8 +412,7 @@ theorem three_smaller_neighbours (u : CubeCell k) (hu : L k u ≠ 0) :
       have hcard : ({incAt k u 0 h0, incAt k u 1 h1, incAt k u 2 h2} : Finset (CubeCell k)).card = 3 := by
         rw [Finset.card_eq_three]
         exact ⟨_, _, _, hv01, hv02, hv12, rfl⟩
-      rw [← hcard]
-      exact Finset.card_le_card hsub
+      exact hcard.symm.le.trans (Finset.card_le_card hsub)
     · have h0 : 1 ≤ (u 0 : ℕ) := by
         rcases Nat.eq_zero_or_pos (u 0 : ℕ) with hz | hp
         · exact absurd (Or.inl ⟨0, by unfold coord; omega, hpos⟩ : InTri k u) hTri
@@ -466,8 +465,7 @@ theorem three_smaller_neighbours (u : CubeCell k) (hu : L k u ≠ 0) :
       have hcard : ({decAt k u 0 h0, decAt k u 1 h1, decAt k u 2 h2} : Finset (CubeCell k)).card = 3 := by
         rw [Finset.card_eq_three]
         exact ⟨_, _, _, hv01, hv02, hv12, rfl⟩
-      rw [← hcard]
-      exact Finset.card_le_card hsub
+      exact hcard.symm.le.trans (Finset.card_le_card hsub)
 
 /-- Corollary (`notes/log.md`'s certificate, applied to `Aset`/`L`): `Aset` percolates. -/
 theorem Aset_percolates : Percolates (Aset k) :=
