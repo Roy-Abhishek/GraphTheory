@@ -14,7 +14,8 @@ theorem ell_le_remaining : ∀ m a b : ℕ, a + b < m → ell m (a, b) ≤ m - a
   induction m using Nat.strong_induction_on with
   | _ m ih =>
     intro a b hab
-    simp only [ell]
+    rw [ell]
+    dsimp only
     split_ifs with hm2 he hao hoo
     · omega
     · omega

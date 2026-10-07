@@ -35,7 +35,8 @@ theorem ell_eq_zero_iff : ∀ m a b : ℕ, a + b < m → (ell m (a, b) = 0 ↔ P
   induction m using Nat.strong_induction_on with
   | _ m ih =>
     intro a b hab
-    simp only [ell, Pmem]
+    rw [ell, Pmem]
+    dsimp only
     split_ifs with hm2 he hao hoo
     · simp
     · simp
