@@ -48,6 +48,7 @@ jobs:
           - BootstrapPercolation.Lemma1ClaimI
           - BootstrapPercolation.Lemma1ClaimII
           - BootstrapPercolation.Lemma1ClaimIII
+          - BootstrapPercolation.Lemma2Cube
 
     steps:
       - uses: actions/checkout@v5
