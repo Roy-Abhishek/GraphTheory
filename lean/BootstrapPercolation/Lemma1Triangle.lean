@@ -43,4 +43,34 @@ decreasing_by all_goals omega
 #eval ell 2 (1, 0)  -- expect 1
 #eval ell 6 (1, 1)  -- expect 0 (odd-odd source cell: 2 * ell 2 (0,0))
 
+/-! ## The m-values the lemma is actually about
+
+Claims (i)/(ii)/(iii) in the notes are proved "by induction on j" for `m = 2^j - 2`
+(`notes/log.md`, "Proof for every k": "Setting: m = 2^j − 2 (j ≥ 2)"), NOT for an
+arbitrary even `m`. That restriction matters: `ell`'s recursion `m₀ = m / 2 - 1` only
+stays within the family (and hence keeps `m₀` even, matching rule (e)/(o)/(x)'s own
+assumption that `m` is even) when `m` itself is `2^j - 2` - a generic even `m` can land
+on an odd `m₀` (e.g. `m = 4` gives `m₀ = 1`), where `ell`'s base-case value (always `0`
+for `m < 2`) and `Pmem`'s base case (always `False`, see `Lemma1ClaimIII.lean`) disagree,
+breaking claim (iii) outright. So the claims are stated for `mOf k`, not arbitrary `m`,
+and proved by plain induction on `k` (not strong induction on `m`). -/
+
+/-- `mOf k = 2^(k+1) - 2`: `mOf 0 = 0`, `mOf 1 = 2`, `mOf 2 = 6`, `mOf 3 = 14`, ... -
+matches `m = 2^j - 2` in the notes with `j = k + 1`. -/
+def mOf (k : ℕ) : ℕ := 2 ^ (k + 1) - 2
+
+/-- `ell`'s own `m₀ = m / 2 - 1` sends `mOf (k+1)` to exactly `mOf k`, staying in the
+family throughout - this is the fact that lets the claims induct cleanly on `k`. -/
+theorem mOf_succ (k : ℕ) : mOf (k + 1) = 2 * mOf k + 2 := by
+  have hk : (0 : ℕ) < 2 ^ k := by positivity
+  have h2 : (2 : ℕ) ^ (k + 1) = 2 ^ k * 2 := pow_succ 2 k
+  have h3 : (2 : ℕ) ^ (k + 1 + 1) = 2 ^ (k + 1) * 2 := pow_succ 2 (k + 1)
+  simp only [mOf]
+  omega
+
+#eval mOf 0  -- expect 0
+#eval mOf 1  -- expect 2
+#eval mOf 2  -- expect 6
+#eval mOf 3  -- expect 14
+
 end BootstrapPercolation.Lemma1Triangle
