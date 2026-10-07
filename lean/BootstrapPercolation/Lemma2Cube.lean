@@ -89,9 +89,63 @@ face, the zero-locus of `ell m` (i.e. `Pmem m`, via `triCoord`). -/
 noncomputable def Aset : Finset (CubeCell k) :=
   Finset.univ.filter (fun u => InH k u ∨ (InTri k u ∧ Pmem (m k) (triCoord k u)))
 
+/-- Centered coordinates are always in `[-m, m]`, since `u i : Fin (n k)` and
+`n k = 2 * m k + 1`. -/
+lemma coord_bounds (u : CubeCell k) (i : Fin 3) :
+    -(m k : ℤ) ≤ coord k u i ∧ coord k u i ≤ (m k : ℤ) := by
+  unfold coord
+  have h : (u i : ℕ) < n k := (u i).isLt
+  unfold n at h
+  omega
+
+/-- A cell of `Tri` always lands in `Δ_m`'s domain: its triangle coordinates sum to
+strictly less than `m`. The six cases (which coordinate is pinned, to `-m` or `+m`) are
+handled uniformly: `split_ifs` on `triCoord`'s own six branches, together with the pinned
+coordinate's identity and `Σ`'s sign, either contradicts the branch actually taken (so the
+coordinate pinned is *not* the one that branch assumes - via `coord_bounds` forcing the other
+two coordinates too far from the extreme for `Σ` to have the needed sign) or gives the bound
+directly. -/
+lemma triCoord_sum_lt (u : CubeCell k) (hTri : InTri k u) :
+    (triCoord k u).1 + (triCoord k u).2 < m k := by
+  have hb0 := coord_bounds k u 0
+  have hb1 := coord_bounds k u 1
+  have hb2 := coord_bounds k u 2
+  unfold triCoord
+  rcases hTri with ⟨i, hi, hSig⟩ | ⟨i, hi, hSig⟩ <;>
+    unfold Sigma at hSig <;>
+    fin_cases i <;>
+    split_ifs <;>
+    dsimp only <;>
+    omega
+
 /-- **Lemma 2, part 1.** `L` vanishes exactly on `Aset`. -/
 theorem L_eq_zero_iff (u : CubeCell k) : L k u = 0 ↔ u ∈ Aset k := by
-  sorry
+  unfold Aset
+  rw [Finset.mem_filter]
+  simp only [Finset.mem_univ, true_and]
+  unfold L
+  by_cases hTri : InTri k u
+  · rw [if_pos hTri]
+    have hNotH : ¬ InH k u := by
+      unfold InH
+      rcases hTri with ⟨i, hi, hSig⟩ | ⟨i, hi, hSig⟩ <;> omega
+    constructor
+    · intro h0
+      exact Or.inr ⟨hTri, (Lemma1Triangle.ell_eq_zero_iff k (triCoord k u).1 (triCoord k u).2
+        (triCoord_sum_lt k u hTri)).mp h0⟩
+    · intro h
+      rcases h with hH | ⟨_, hP⟩
+      · exact absurd hH hNotH
+      · exact (Lemma1Triangle.ell_eq_zero_iff k (triCoord k u).1 (triCoord k u).2
+          (triCoord_sum_lt k u hTri)).mpr hP
+  · rw [if_neg hTri]
+    constructor
+    · intro h0
+      exact Or.inl (Int.natAbs_eq_zero.mp h0)
+    · intro h
+      rcases h with hH | ⟨hT, _⟩
+      · exact Int.natAbs_eq_zero.mpr hH
+      · exact absurd hT hTri
 
 /-- **Lemma 2, part 2.** `L ≤ 3m` everywhere (`notes/log.md`: "`L ≤ |Σ| ≤ 3m`, with equality at
 the corners"). This is all the certificate corollary below needs; the matching equality case
