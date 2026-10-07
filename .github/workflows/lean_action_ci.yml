@@ -50,6 +50,7 @@ jobs:
           - BootstrapPercolation.Lemma1ClaimIII
           - BootstrapPercolation.Lemma2Cube
           - BootstrapPercolation.HeadlineTheorem
+          - BootstrapPercolation.Question7
 
     steps:
       - uses: actions/checkout@v5
