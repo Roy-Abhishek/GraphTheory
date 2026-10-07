@@ -14,11 +14,9 @@ always `0` and the third comes from whichever side attains the `min` in rule (x)
 `(i,j)`'s neighbours `w'` at level `mOf k` have `ell (mOf k) w' < ell (mOf k) (i,j)`
 (by `ih`), and each such `w'` - in the SAME direction - gives a neighbour of `w` at level
 `mOf (k+1)` with smaller `ell`, because unfolding rule (x) at that neighbour always
-reduces to `1 + min (2 * ell (mOf k) (i,j)) (2 * ell (mOf k) w')`, which is
-`< 2 * ell (mOf k) (i,j) = ell (mOf (k+1)) w` exactly when `ell (mOf k) w' < ell (mOf k)
-(i,j)`. This "same direction" map is injective (the 4 possible images are pairwise
-distinct), so the ≥3 count transfers via `Finset.card_image_of_injOn` +
-`Finset.card_le_card`. -/
+reduces to `1 + min (2 * ell (mOf k) (i,j)) (2 * ell (mOf k) w')`. This "same direction"
+map is injective (the 4 possible images are pairwise distinct), so the ≥3 count transfers
+via `Finset.card_image_of_injOn` + `Finset.card_le_card`. -/
 
 namespace BootstrapPercolation.Lemma1Triangle
 
@@ -56,12 +54,182 @@ theorem three_smaller_neighbours :
       intro a b hab hpos
       have hsucc : mOf (k + 1) = 2 * mOf k + 2 := mOf_succ k
       have hm0eq : mOf (k + 1) / 2 - 1 = mOf k := by omega
-      rw [ell] at hpos ⊢
-      dsimp only at hpos ⊢
-      rw [hm0eq] at hpos ⊢
-      split_ifs at hpos ⊢ with he hao hoo
-      · exact absurd hpos (by omega)
+      have ha2 : a % 2 = 0 ∨ a % 2 = 1 := by omega
+      have hb2 : b % 2 = 0 ∨ b % 2 = 1 := by omega
+      rcases ha2 with ha2 | ha2 <;> rcases hb2 with hb2 | hb2
+      · -- a, b both even: contradiction
+        exfalso
+        have hval : ell (mOf (k + 1)) (a, b) = 0 := by
+          rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
+        rw [hval] at hpos; omega
+      · -- a even, b odd: mixed
+        have hval : ell (mOf (k + 1)) (a, b) =
+            1 + min (2 * ell (mOf k) (a / 2 - 1, b / 2)) (2 * ell (mOf k) (a / 2, b / 2)) := by
+          rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
+        rw [hval] at hpos ⊢
+        set X := 2 * ell (mOf k) (a / 2 - 1, b / 2) with hXdef
+        set Y := 2 * ell (mOf k) (a / 2, b / 2) with hYdef
+        have e1 : ell (mOf (k + 1)) (a, b - 1) = 0 := by
+          rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
+        have e2 : ell (mOf (k + 1)) (a, b + 1) = 0 := by
+          rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
+        have hb1 : b ≥ 1 := by omega
+        have hmemD : (a, b - 1) ∈ neighbors a b :=
+          (mem_neighbors a b _).mpr (Or.inr (Or.inr (Or.inr ⟨hb1, rfl⟩)))
+        have hmemU : (a, b + 1) ∈ neighbors a b := (mem_neighbors a b _).mpr (Or.inr (Or.inl rfl))
+        have hmemR : (a + 1, b) ∈ neighbors a b := (mem_neighbors a b _).mpr (Or.inl rfl)
+        rcases lt_or_ge X Y with hlt | hge
+        · have ha1 : a ≥ 1 := by
+            by_contra ha0
+            have ha0' : a = 0 := by omega
+            rw [hXdef, hYdef, ha0'] at hlt
+            simp at hlt
+          have e3 : ell (mOf (k + 1)) (a - 1, b) = X := by
+            have step : ell (mOf (k + 1)) (a - 1, b) = 2 * ell (mOf k) ((a - 1) / 2, b / 2) := by
+              rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
+            rw [step, show (((a - 1) / 2, b / 2) : ℕ × ℕ) = (a / 2 - 1, b / 2) from
+              Prod.ext (by omega) (by omega)]
+          have hmemL : (a - 1, b) ∈ neighbors a b :=
+            (mem_neighbors a b _).mpr (Or.inr (Or.inr (Or.inl ⟨ha1, rfl⟩)))
+          have hcard : {((a, b - 1) : ℕ × ℕ), (a, b + 1), (a - 1, b)} ⊆
+              (neighbors a b).filter (fun v => ell (mOf (k + 1)) v < 1 + min X Y) := by
+            intro v hv
+            simp only [Finset.mem_insert, Finset.mem_singleton] at hv
+            rcases hv with rfl | rfl | rfl
+            · exact Finset.mem_filter.mpr ⟨hmemD, by rw [e1]; omega⟩
+            · exact Finset.mem_filter.mpr ⟨hmemU, by rw [e2]; omega⟩
+            · exact Finset.mem_filter.mpr ⟨hmemL, by rw [e3]; omega⟩
+          have hd1 : ((a, b - 1) : ℕ × ℕ) ≠ (a, b + 1) := by
+            intro h; simp only [Prod.mk.injEq] at h; omega
+          have hd2 : ((a, b - 1) : ℕ × ℕ) ≠ (a - 1, b) := by
+            intro h; simp only [Prod.mk.injEq] at h; omega
+          have hd3 : ((a, b + 1) : ℕ × ℕ) ≠ (a - 1, b) := by
+            intro h; simp only [Prod.mk.injEq] at h; omega
+          have hcard3 : ({((a, b - 1) : ℕ × ℕ), (a, b + 1), (a - 1, b)} :
+              Finset (ℕ × ℕ)).card = 3 := by
+            first
+            | rw [Finset.card_insert_of_notMem (by simp [hd1, hd2]),
+                Finset.card_insert_of_notMem (by simp [hd3]), Finset.card_singleton]
+            | rw [Finset.card_insert_of_not_mem (by simp [hd1, hd2]),
+                Finset.card_insert_of_not_mem (by simp [hd3]), Finset.card_singleton]
+          calc (3 : ℕ) = ({((a, b - 1) : ℕ × ℕ), (a, b + 1), (a - 1, b)} :
+                Finset (ℕ × ℕ)).card := hcard3.symm
+            _ ≤ _ := Finset.card_le_card hcard
+        · have e4 : ell (mOf (k + 1)) (a + 1, b) = Y := by
+            have step : ell (mOf (k + 1)) (a + 1, b) = 2 * ell (mOf k) ((a + 1) / 2, b / 2) := by
+              rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
+            rw [step, show (((a + 1) / 2, b / 2) : ℕ × ℕ) = (a / 2, b / 2) from
+              Prod.ext (by omega) (by omega)]
+          have hd1 : ((a, b - 1) : ℕ × ℕ) ≠ (a, b + 1) := by
+            intro h; simp only [Prod.mk.injEq] at h; omega
+          have hd2 : ((a, b - 1) : ℕ × ℕ) ≠ (a + 1, b) := by
+            intro h; simp only [Prod.mk.injEq] at h; omega
+          have hd3 : ((a, b + 1) : ℕ × ℕ) ≠ (a + 1, b) := by
+            intro h; simp only [Prod.mk.injEq] at h; omega
+          have hcard : {((a, b - 1) : ℕ × ℕ), (a, b + 1), (a + 1, b)} ⊆
+              (neighbors a b).filter (fun v => ell (mOf (k + 1)) v < 1 + min X Y) := by
+            intro v hv
+            simp only [Finset.mem_insert, Finset.mem_singleton] at hv
+            rcases hv with rfl | rfl | rfl
+            · exact Finset.mem_filter.mpr ⟨hmemD, by rw [e1]; omega⟩
+            · exact Finset.mem_filter.mpr ⟨hmemU, by rw [e2]; omega⟩
+            · exact Finset.mem_filter.mpr ⟨hmemR, by rw [e4]; omega⟩
+          have hcard3 : ({((a, b - 1) : ℕ × ℕ), (a, b + 1), (a + 1, b)} :
+              Finset (ℕ × ℕ)).card = 3 := by
+            first
+            | rw [Finset.card_insert_of_notMem (by simp [hd1, hd2]),
+                Finset.card_insert_of_notMem (by simp [hd3]), Finset.card_singleton]
+            | rw [Finset.card_insert_of_not_mem (by simp [hd1, hd2]),
+                Finset.card_insert_of_not_mem (by simp [hd3]), Finset.card_singleton]
+          calc (3 : ℕ) = ({((a, b - 1) : ℕ × ℕ), (a, b + 1), (a + 1, b)} :
+                Finset (ℕ × ℕ)).card := hcard3.symm
+            _ ≤ _ := Finset.card_le_card hcard
+      · -- a odd, b even: mixed
+        have hval : ell (mOf (k + 1)) (a, b) =
+            1 + min (2 * ell (mOf k) (a / 2, b / 2 - 1)) (2 * ell (mOf k) (a / 2, b / 2)) := by
+          rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
+        rw [hval] at hpos ⊢
+        set X := 2 * ell (mOf k) (a / 2, b / 2 - 1) with hXdef
+        set Y := 2 * ell (mOf k) (a / 2, b / 2) with hYdef
+        have e1 : ell (mOf (k + 1)) (a - 1, b) = 0 := by
+          rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
+        have e2 : ell (mOf (k + 1)) (a + 1, b) = 0 := by
+          rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
+        have ha1 : a ≥ 1 := by omega
+        have hmemL : (a - 1, b) ∈ neighbors a b :=
+          (mem_neighbors a b _).mpr (Or.inr (Or.inr (Or.inl ⟨ha1, rfl⟩)))
+        have hmemR : (a + 1, b) ∈ neighbors a b := (mem_neighbors a b _).mpr (Or.inl rfl)
+        have hmemU : (a, b + 1) ∈ neighbors a b := (mem_neighbors a b _).mpr (Or.inr (Or.inl rfl))
+        rcases lt_or_ge X Y with hlt | hge
+        · have hb1 : b ≥ 1 := by
+            by_contra hb0
+            have hb0' : b = 0 := by omega
+            rw [hXdef, hYdef, hb0'] at hlt
+            simp at hlt
+          have e3 : ell (mOf (k + 1)) (a, b - 1) = X := by
+            have step : ell (mOf (k + 1)) (a, b - 1) = 2 * ell (mOf k) (a / 2, (b - 1) / 2) := by
+              rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
+            rw [step, show ((a / 2, (b - 1) / 2) : ℕ × ℕ) = (a / 2, b / 2 - 1) from
+              Prod.ext (by omega) (by omega)]
+          have hmemD : (a, b - 1) ∈ neighbors a b :=
+            (mem_neighbors a b _).mpr (Or.inr (Or.inr (Or.inr ⟨hb1, rfl⟩)))
+          have hd1 : ((a - 1, b) : ℕ × ℕ) ≠ (a + 1, b) := by
+            intro h; simp only [Prod.mk.injEq] at h; omega
+          have hd2 : ((a - 1, b) : ℕ × ℕ) ≠ (a, b - 1) := by
+            intro h; simp only [Prod.mk.injEq] at h; omega
+          have hd3 : ((a + 1, b) : ℕ × ℕ) ≠ (a, b - 1) := by
+            intro h; simp only [Prod.mk.injEq] at h; omega
+          have hcard : {((a - 1, b) : ℕ × ℕ), (a + 1, b), (a, b - 1)} ⊆
+              (neighbors a b).filter (fun v => ell (mOf (k + 1)) v < 1 + min X Y) := by
+            intro v hv
+            simp only [Finset.mem_insert, Finset.mem_singleton] at hv
+            rcases hv with rfl | rfl | rfl
+            · exact Finset.mem_filter.mpr ⟨hmemL, by rw [e1]; omega⟩
+            · exact Finset.mem_filter.mpr ⟨hmemR, by rw [e2]; omega⟩
+            · exact Finset.mem_filter.mpr ⟨hmemD, by rw [e3]; omega⟩
+          have hcard3 : ({((a - 1, b) : ℕ × ℕ), (a + 1, b), (a, b - 1)} :
+              Finset (ℕ × ℕ)).card = 3 := by
+            first
+            | rw [Finset.card_insert_of_notMem (by simp [hd1, hd2]),
+                Finset.card_insert_of_notMem (by simp [hd3]), Finset.card_singleton]
+            | rw [Finset.card_insert_of_not_mem (by simp [hd1, hd2]),
+                Finset.card_insert_of_not_mem (by simp [hd3]), Finset.card_singleton]
+          calc (3 : ℕ) = ({((a - 1, b) : ℕ × ℕ), (a + 1, b), (a, b - 1)} :
+                Finset (ℕ × ℕ)).card := hcard3.symm
+            _ ≤ _ := Finset.card_le_card hcard
+        · have e4 : ell (mOf (k + 1)) (a, b + 1) = Y := by
+            have step : ell (mOf (k + 1)) (a, b + 1) = 2 * ell (mOf k) (a / 2, (b + 1) / 2) := by
+              rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
+            rw [step, show ((a / 2, (b + 1) / 2) : ℕ × ℕ) = (a / 2, b / 2) from
+              Prod.ext (by omega) (by omega)]
+          have hd1 : ((a - 1, b) : ℕ × ℕ) ≠ (a + 1, b) := by
+            intro h; simp only [Prod.mk.injEq] at h; omega
+          have hd2 : ((a - 1, b) : ℕ × ℕ) ≠ (a, b + 1) := by
+            intro h; simp only [Prod.mk.injEq] at h; omega
+          have hd3 : ((a + 1, b) : ℕ × ℕ) ≠ (a, b + 1) := by
+            intro h; simp only [Prod.mk.injEq] at h; omega
+          have hcard : {((a - 1, b) : ℕ × ℕ), (a + 1, b), (a, b + 1)} ⊆
+              (neighbors a b).filter (fun v => ell (mOf (k + 1)) v < 1 + min X Y) := by
+            intro v hv
+            simp only [Finset.mem_insert, Finset.mem_singleton] at hv
+            rcases hv with rfl | rfl | rfl
+            · exact Finset.mem_filter.mpr ⟨hmemL, by rw [e1]; omega⟩
+            · exact Finset.mem_filter.mpr ⟨hmemR, by rw [e2]; omega⟩
+            · exact Finset.mem_filter.mpr ⟨hmemU, by rw [e4]; omega⟩
+          have hcard3 : ({((a - 1, b) : ℕ × ℕ), (a + 1, b), (a, b + 1)} :
+              Finset (ℕ × ℕ)).card = 3 := by
+            first
+            | rw [Finset.card_insert_of_notMem (by simp [hd1, hd2]),
+                Finset.card_insert_of_notMem (by simp [hd3]), Finset.card_singleton]
+            | rw [Finset.card_insert_of_not_mem (by simp [hd1, hd2]),
+                Finset.card_insert_of_not_mem (by simp [hd3]), Finset.card_singleton]
+          calc (3 : ℕ) = ({((a - 1, b) : ℕ × ℕ), (a + 1, b), (a, b + 1)} :
+                Finset (ℕ × ℕ)).card := hcard3.symm
+            _ ≤ _ := Finset.card_le_card hcard
       · -- a, b both odd: the hard case
+        have hval : ell (mOf (k + 1)) (a, b) = 2 * ell (mOf k) (a / 2, b / 2) := by
+          rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
+        rw [hval] at hpos ⊢
         have hpos' : 0 < ell (mOf k) (a / 2, b / 2) := by omega
         have hab' : a / 2 + b / 2 ≤ mOf k := by omega
         have key := ih (a / 2) (b / 2) hab' hpos'
@@ -69,47 +237,40 @@ theorem three_smaller_neighbours :
         set j := b / 2 with hjdef
         have hai : a = 2 * i + 1 := by omega
         have hbj : b = 2 * j + 1 := by omega
-        -- The four possible shifted points and their `ell (mOf (k+1))` values, each
-        -- reducing to `1 + min (2 * ell (mOf k) (i,j)) (2 * ell (mOf k) <neighbour>)`.
         have hLeft : a ≥ 1 → ell (mOf (k + 1)) (a - 1, b) =
             1 + min (2 * ell (mOf k) (i, j)) (2 * ell (mOf k) (i - 1, j)) := by
           intro ha1
-          rw [ell]
-          dsimp only
-          rw [hm0eq]
-          have e3 : (a - 1) / 2 - 1 = i - 1 := by omega
-          have e4 : (a - 1) / 2 = i := by omega
-          have e5 : b / 2 = j := by omega
-          split_ifs <;> first | omega | (rw [e3, e4, e5]; omega)
+          have step : ell (mOf (k + 1)) (a - 1, b) =
+              1 + min (2 * ell (mOf k) ((a - 1) / 2 - 1, b / 2)) (2 * ell (mOf k) ((a - 1) / 2, b / 2)) := by
+            rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
+          rw [step, show (((a - 1) / 2 - 1, b / 2) : ℕ × ℕ) = (i - 1, j) from
+                Prod.ext (by omega) (by omega),
+              show (((a - 1) / 2, b / 2) : ℕ × ℕ) = (i, j) from Prod.ext (by omega) (by omega)]
         have hRight : ell (mOf (k + 1)) (a + 1, b) =
             1 + min (2 * ell (mOf k) (i, j)) (2 * ell (mOf k) (i + 1, j)) := by
-          rw [ell]
-          dsimp only
-          rw [hm0eq]
-          have e4 : (a + 1) / 2 - 1 = i := by omega
-          have e4' : (a + 1) / 2 = i + 1 := by omega
-          have e5 : b / 2 = j := by omega
-          split_ifs <;> first | omega | (rw [e4, e4', e5]; omega)
+          have step : ell (mOf (k + 1)) (a + 1, b) =
+              1 + min (2 * ell (mOf k) ((a + 1) / 2 - 1, b / 2)) (2 * ell (mOf k) ((a + 1) / 2, b / 2)) := by
+            rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
+          rw [step, show (((a + 1) / 2 - 1, b / 2) : ℕ × ℕ) = (i, j) from
+                Prod.ext (by omega) (by omega),
+              show (((a + 1) / 2, b / 2) : ℕ × ℕ) = (i + 1, j) from Prod.ext (by omega) (by omega)]
         have hDown : b ≥ 1 → ell (mOf (k + 1)) (a, b - 1) =
             1 + min (2 * ell (mOf k) (i, j)) (2 * ell (mOf k) (i, j - 1)) := by
           intro hb1
-          rw [ell]
-          dsimp only
-          rw [hm0eq]
-          have e3 : a / 2 = i := by omega
-          have e4 : (b - 1) / 2 - 1 = j - 1 := by omega
-          have e5 : (b - 1) / 2 = j := by omega
-          split_ifs <;> first | omega | (rw [e3, e4, e5]; omega)
+          have step : ell (mOf (k + 1)) (a, b - 1) =
+              1 + min (2 * ell (mOf k) (a / 2, (b - 1) / 2 - 1)) (2 * ell (mOf k) (a / 2, (b - 1) / 2)) := by
+            rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
+          rw [step, show ((a / 2, (b - 1) / 2 - 1) : ℕ × ℕ) = (i, j - 1) from
+                Prod.ext (by omega) (by omega),
+              show ((a / 2, (b - 1) / 2) : ℕ × ℕ) = (i, j) from Prod.ext (by omega) (by omega)]
         have hUp : ell (mOf (k + 1)) (a, b + 1) =
             1 + min (2 * ell (mOf k) (i, j)) (2 * ell (mOf k) (i, j + 1)) := by
-          rw [ell]
-          dsimp only
-          rw [hm0eq]
-          have e3 : a / 2 = i := by omega
-          have e4 : (b + 1) / 2 - 1 = j := by omega
-          have e4' : (b + 1) / 2 = j + 1 := by omega
-          split_ifs <;> first | omega | (rw [e3, e4, e4']; omega)
-        -- The four pointwise images of f on the (at most 4) real neighbours of (i,j).
+          have step : ell (mOf (k + 1)) (a, b + 1) =
+              1 + min (2 * ell (mOf k) (a / 2, (b + 1) / 2 - 1)) (2 * ell (mOf k) (a / 2, (b + 1) / 2)) := by
+            rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
+          rw [step, show ((a / 2, (b + 1) / 2 - 1) : ℕ × ℕ) = (i, j) from
+                Prod.ext (by omega) (by omega),
+              show ((a / 2, (b + 1) / 2) : ℕ × ℕ) = (i, j + 1) from Prod.ext (by omega) (by omega)]
         set f : ℕ × ℕ → ℕ × ℕ := fun pq =>
           if pq.1 + 1 = i then (a - 1, b)
           else if pq.2 + 1 = j then (a, b - 1)
@@ -171,123 +332,5 @@ theorem three_smaller_neighbours :
           _ ≤ ((neighbors a b).filter
                 (fun v => ell (mOf (k + 1)) v < 2 * ell (mOf k) (i, j))).card :=
               Finset.card_le_card hsub
-      · -- a odd, b even: mixed
-        set X := 2 * ell (mOf k) (a / 2, b / 2 - 1) with hXdef
-        set Y := 2 * ell (mOf k) (a / 2, b / 2) with hYdef
-        have e1 : ell (mOf (k + 1)) (a - 1, b) = 0 := by
-          rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
-        have e2 : ell (mOf (k + 1)) (a + 1, b) = 0 := by
-          rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
-        have ha1 : a ≥ 1 := by omega
-        have hmemL : (a - 1, b) ∈ neighbors a b :=
-          (mem_neighbors a b _).mpr (Or.inr (Or.inr (Or.inl ⟨ha1, rfl⟩)))
-        have hmemR : (a + 1, b) ∈ neighbors a b := (mem_neighbors a b _).mpr (Or.inl rfl)
-        have hmemU : (a, b + 1) ∈ neighbors a b := (mem_neighbors a b _).mpr (Or.inr (Or.inl rfl))
-        rcases lt_or_ge X Y with hlt | hge
-        · have hb1 : b ≥ 1 := by
-            by_contra hb0
-            have hb0' : b = 0 := by omega
-            rw [hXdef, hYdef, hb0'] at hlt
-            simp at hlt
-          have e3 : ell (mOf (k + 1)) (a, b - 1) = X := by
-            rw [ell]; dsimp only; rw [hm0eq]
-            have ea : a / 2 = a / 2 := rfl
-            have eb : (b - 1) / 2 - 1 = b / 2 - 1 - 1 := by omega
-            have eb2 : (b - 1) / 2 = b / 2 - 1 := by omega
-            split_ifs <;> first | omega | (rw [eb2]; omega)
-          have hmemD : (a, b - 1) ∈ neighbors a b :=
-            (mem_neighbors a b _).mpr (Or.inr (Or.inr (Or.inr ⟨hb1, rfl⟩)))
-          have hcard : {((a - 1, b) : ℕ × ℕ), (a + 1, b), (a, b - 1)} ⊆
-              (neighbors a b).filter (fun v => ell (mOf (k+1)) v < 1 + min X Y) := by
-            intro v hv
-            simp only [Finset.mem_insert, Finset.mem_singleton] at hv
-            rcases hv with rfl | rfl | rfl
-            · exact Finset.mem_filter.mpr ⟨hmemL, by rw [e1]; omega⟩
-            · exact Finset.mem_filter.mpr ⟨hmemR, by rw [e2]; omega⟩
-            · exact Finset.mem_filter.mpr ⟨hmemD, by rw [e3]; omega⟩
-          have hcard3 : ({((a - 1, b) : ℕ × ℕ), (a + 1, b), (a, b - 1)} :
-              Finset (ℕ × ℕ)).card = 3 := by
-            rw [Finset.card_insert_of_not_mem, Finset.card_insert_of_not_mem,
-              Finset.card_singleton] <;> simp <;> omega
-          calc (3 : ℕ) = ({((a - 1, b) : ℕ × ℕ), (a + 1, b), (a, b - 1)} :
-                Finset (ℕ × ℕ)).card := hcard3.symm
-            _ ≤ _ := Finset.card_le_card hcard
-        · have e4 : ell (mOf (k + 1)) (a, b + 1) = Y := by
-            rw [ell]; dsimp only; rw [hm0eq]
-            have eb : (b + 1) / 2 = b / 2 := by omega
-            split_ifs <;> first | omega | (rw [eb]; omega)
-          have hcard : {((a - 1, b) : ℕ × ℕ), (a + 1, b), (a, b + 1)} ⊆
-              (neighbors a b).filter (fun v => ell (mOf (k+1)) v < 1 + min X Y) := by
-            intro v hv
-            simp only [Finset.mem_insert, Finset.mem_singleton] at hv
-            rcases hv with rfl | rfl | rfl
-            · exact Finset.mem_filter.mpr ⟨hmemL, by rw [e1]; omega⟩
-            · exact Finset.mem_filter.mpr ⟨hmemR, by rw [e2]; omega⟩
-            · exact Finset.mem_filter.mpr ⟨hmemU, by rw [e4]; omega⟩
-          have hcard3 : ({((a - 1, b) : ℕ × ℕ), (a + 1, b), (a, b + 1)} :
-              Finset (ℕ × ℕ)).card = 3 := by
-            rw [Finset.card_insert_of_not_mem, Finset.card_insert_of_not_mem,
-              Finset.card_singleton] <;> simp <;> omega
-          calc (3 : ℕ) = ({((a - 1, b) : ℕ × ℕ), (a + 1, b), (a, b + 1)} :
-                Finset (ℕ × ℕ)).card := hcard3.symm
-            _ ≤ _ := Finset.card_le_card hcard
-      · -- a even, b odd: mixed, symmetric to the previous case
-        set X := 2 * ell (mOf k) (a / 2 - 1, b / 2) with hXdef
-        set Y := 2 * ell (mOf k) (a / 2, b / 2) with hYdef
-        have e1 : ell (mOf (k + 1)) (a, b - 1) = 0 := by
-          rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
-        have e2 : ell (mOf (k + 1)) (a, b + 1) = 0 := by
-          rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
-        have hb1 : b ≥ 1 := by omega
-        have hmemD : (a, b - 1) ∈ neighbors a b :=
-          (mem_neighbors a b _).mpr (Or.inr (Or.inr (Or.inr ⟨hb1, rfl⟩)))
-        have hmemU : (a, b + 1) ∈ neighbors a b := (mem_neighbors a b _).mpr (Or.inr (Or.inl rfl))
-        have hmemR : (a + 1, b) ∈ neighbors a b := (mem_neighbors a b _).mpr (Or.inl rfl)
-        rcases lt_or_ge X Y with hlt | hge
-        · have ha1 : a ≥ 1 := by
-            by_contra ha0
-            have ha0' : a = 0 := by omega
-            rw [hXdef, hYdef, ha0'] at hlt
-            simp at hlt
-          have e3 : ell (mOf (k + 1)) (a - 1, b) = X := by
-            rw [ell]; dsimp only; rw [hm0eq]
-            have ea : (a - 1) / 2 = a / 2 - 1 := by omega
-            split_ifs <;> first | omega | (rw [ea]; omega)
-          have hmemL : (a - 1, b) ∈ neighbors a b :=
-            (mem_neighbors a b _).mpr (Or.inr (Or.inr (Or.inl ⟨ha1, rfl⟩)))
-          have hcard : {((a, b - 1) : ℕ × ℕ), (a, b + 1), (a - 1, b)} ⊆
-              (neighbors a b).filter (fun v => ell (mOf (k+1)) v < 1 + min X Y) := by
-            intro v hv
-            simp only [Finset.mem_insert, Finset.mem_singleton] at hv
-            rcases hv with rfl | rfl | rfl
-            · exact Finset.mem_filter.mpr ⟨hmemD, by rw [e1]; omega⟩
-            · exact Finset.mem_filter.mpr ⟨hmemU, by rw [e2]; omega⟩
-            · exact Finset.mem_filter.mpr ⟨hmemL, by rw [e3]; omega⟩
-          have hcard3 : ({((a, b - 1) : ℕ × ℕ), (a, b + 1), (a - 1, b)} :
-              Finset (ℕ × ℕ)).card = 3 := by
-            rw [Finset.card_insert_of_not_mem, Finset.card_insert_of_not_mem,
-              Finset.card_singleton] <;> simp <;> omega
-          calc (3 : ℕ) = ({((a, b - 1) : ℕ × ℕ), (a, b + 1), (a - 1, b)} :
-                Finset (ℕ × ℕ)).card := hcard3.symm
-            _ ≤ _ := Finset.card_le_card hcard
-        · have e4 : ell (mOf (k + 1)) (a + 1, b) = Y := by
-            rw [ell]; dsimp only; rw [hm0eq]
-            have ea : (a + 1) / 2 = a / 2 := by omega
-            split_ifs <;> first | omega | (rw [ea]; omega)
-          have hcard : {((a, b - 1) : ℕ × ℕ), (a, b + 1), (a + 1, b)} ⊆
-              (neighbors a b).filter (fun v => ell (mOf (k+1)) v < 1 + min X Y) := by
-            intro v hv
-            simp only [Finset.mem_insert, Finset.mem_singleton] at hv
-            rcases hv with rfl | rfl | rfl
-            · exact Finset.mem_filter.mpr ⟨hmemD, by rw [e1]; omega⟩
-            · exact Finset.mem_filter.mpr ⟨hmemU, by rw [e2]; omega⟩
-            · exact Finset.mem_filter.mpr ⟨hmemR, by rw [e4]; omega⟩
-          have hcard3 : ({((a, b - 1) : ℕ × ℕ), (a, b + 1), (a + 1, b)} :
-              Finset (ℕ × ℕ)).card = 3 := by
-            rw [Finset.card_insert_of_not_mem, Finset.card_insert_of_not_mem,
-              Finset.card_singleton] <;> simp <;> omega
-          calc (3 : ℕ) = ({((a, b - 1) : ℕ × ℕ), (a, b + 1), (a + 1, b)} :
-                Finset (ℕ × ℕ)).card := hcard3.symm
-            _ ≤ _ := Finset.card_le_card hcard
 
 end BootstrapPercolation.Lemma1Triangle
