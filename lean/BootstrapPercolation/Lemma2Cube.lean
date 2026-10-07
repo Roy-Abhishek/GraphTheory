@@ -111,11 +111,11 @@ lemma triCoord_sum_lt (u : CubeCell k) (hTri : InTri k u) :
   have hb1 := coord_bounds k u 1
   have hb2 := coord_bounds k u 2
   unfold triCoord
+  have hidx : ∀ j : Fin 3, j = 0 ∨ j = 1 ∨ j = 2 := by decide
   rcases hTri with ⟨i, hi, hSig⟩ | ⟨i, hi, hSig⟩ <;>
     unfold Sigma at hSig <;>
-    have hbi := coord_bounds k u i <;>
-    fin_cases i <;>
-    dsimp only at hi hSig hbi ⊢ <;>
+    rcases hidx i with hi3 | hi3 | hi3 <;>
+    subst hi3 <;>
     split_ifs <;>
     omega
 
