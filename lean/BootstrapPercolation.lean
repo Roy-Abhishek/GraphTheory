@@ -1,3 +1,4 @@
 import Mathlib
 import BootstrapPercolation.Basic
 import BootstrapPercolation.MainResult
+import BootstrapPercolation.Lemma1Triangle
