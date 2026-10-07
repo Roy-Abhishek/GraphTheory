@@ -114,8 +114,8 @@ lemma triCoord_sum_lt (u : CubeCell k) (hTri : InTri k u) :
   rcases hTri with ⟨i, hi, hSig⟩ | ⟨i, hi, hSig⟩ <;>
     unfold Sigma at hSig <;>
     fin_cases i <;>
+    dsimp only at hi hSig ⊢ <;>
     split_ifs <;>
-    dsimp only <;>
     omega
 
 /-- **Lemma 2, part 1.** `L` vanishes exactly on `Aset`. -/
