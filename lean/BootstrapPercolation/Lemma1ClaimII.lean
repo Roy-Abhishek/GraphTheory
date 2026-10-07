@@ -6,19 +6,19 @@ import BootstrapPercolation.Lemma1Triangle
 From `notes/log.md`: on `Δ_m`, every cell with `ell m (a, b) > 0` has at least 3 of its
 (existing, i.e. nonnegative-coordinate) in-plane neighbours `(a±1,b)`, `(a,b±1)` with
 strictly smaller `ell m` value. Stated for `a + b ≤ mOf k`, `m = mOf k`, matching claim
-(i) - see `Lemma1Triangle.lean`'s "The m-values the lemma is actually about".
+(i) - see `Lemma1Triangle.lean`'s family restriction.
 
 Two cases, as in the notes: a *mixed-parity* cell, where the two even-even neighbours are
 always `0` and the third comes from whichever side attains the `min` in rule (x); and an
 *odd-odd* cell `w = (2i+1,2j+1)`, which needs the harder correspondence: at least 3 of
 `(i,j)`'s neighbours `w'` at level `mOf k` have `ell (mOf k) w' < ell (mOf k) (i,j)`
-(by `ih`), and each such `w'` - in the SAME direction - gives a neighbour `w' + (a-i,b-j)`
-of `w` at level `mOf (k+1)` with smaller `ell`, because unfolding rule (x) at that
-neighbour always reduces to `1 + min (2 * ell (mOf k) (i,j)) (2 * ell (mOf k) w')`, which is
+(by `ih`), and each such `w'` - in the SAME direction - gives a neighbour of `w` at level
+`mOf (k+1)` with smaller `ell`, because unfolding rule (x) at that neighbour always
+reduces to `1 + min (2 * ell (mOf k) (i,j)) (2 * ell (mOf k) w')`, which is
 `< 2 * ell (mOf k) (i,j) = ell (mOf (k+1)) w` exactly when `ell (mOf k) w' < ell (mOf k)
 (i,j)`. This "same direction" map is injective (the 4 possible images are pairwise
-distinct, since `a, b ≥ 1`), so the ≥3 count transfers via `Finset.card_image_of_injOn`
-+ `Finset.card_le_card`. -/
+distinct), so the ≥3 count transfers via `Finset.card_image_of_injOn` +
+`Finset.card_le_card`. -/
 
 namespace BootstrapPercolation.Lemma1Triangle
 
@@ -56,16 +56,9 @@ theorem three_smaller_neighbours :
       intro a b hab hpos
       have hsucc : mOf (k + 1) = 2 * mOf k + 2 := mOf_succ k
       have hm0eq : mOf (k + 1) / 2 - 1 = mOf k := by omega
-      have hval : ell (mOf (k + 1)) (a, b) =
-          (if a % 2 = 0 ∧ b % 2 = 0 then 0
-           else if a % 2 = 1 then
-             if b % 2 = 1 then 2 * ell (mOf k) (a / 2, b / 2)
-             else 1 + min (2 * ell (mOf k) (a / 2, b / 2 - 1)) (2 * ell (mOf k) (a / 2, b / 2))
-           else 1 + min (2 * ell (mOf k) (a / 2 - 1, b / 2)) (2 * ell (mOf k) (a / 2, b / 2))) := by
-        conv_lhs => rw [ell]
-        dsimp only
-        rw [hm0eq]
-      rw [hval] at hpos ⊢
+      rw [ell] at hpos ⊢
+      dsimp only at hpos ⊢
+      rw [hm0eq] at hpos ⊢
       split_ifs at hpos ⊢ with he hao hoo
       · exact absurd hpos (by omega)
       · -- a, b both odd: the hard case
@@ -80,62 +73,56 @@ theorem three_smaller_neighbours :
         -- reducing to `1 + min (2 * ell (mOf k) (i,j)) (2 * ell (mOf k) <neighbour>)`.
         have hLeft : a ≥ 1 → ell (mOf (k + 1)) (a - 1, b) =
             1 + min (2 * ell (mOf k) (i, j)) (2 * ell (mOf k) (i - 1, j)) := by
-          intro _
-          have e1 : (a - 1) % 2 = 0 := by omega
-          have e2 : b % 2 = 1 := by omega
+          intro ha1
+          rw [ell]
+          dsimp only
+          rw [hm0eq]
           have e3 : (a - 1) / 2 - 1 = i - 1 := by omega
           have e4 : (a - 1) / 2 = i := by omega
           have e5 : b / 2 = j := by omega
-          conv_lhs => rw [ell]
-          dsimp only
-          rw [hm0eq]
-          rw [if_neg (by omega), if_neg (by omega), e3, e4, e5]
-          ring_nf
+          split_ifs <;> first | omega | (rw [e3, e4, e5]; omega)
         have hRight : ell (mOf (k + 1)) (a + 1, b) =
             1 + min (2 * ell (mOf k) (i, j)) (2 * ell (mOf k) (i + 1, j)) := by
-          have e1 : (a + 1) % 2 = 0 := by omega
-          have e2 : b % 2 = 1 := by omega
+          rw [ell]
+          dsimp only
+          rw [hm0eq]
           have e4 : (a + 1) / 2 - 1 = i := by omega
           have e4' : (a + 1) / 2 = i + 1 := by omega
           have e5 : b / 2 = j := by omega
-          conv_lhs => rw [ell]
-          dsimp only
-          rw [hm0eq]
-          rw [if_neg (by omega), if_neg (by omega), e4, e4', e5]
-          ring_nf
+          split_ifs <;> first | omega | (rw [e4, e4', e5]; omega)
         have hDown : b ≥ 1 → ell (mOf (k + 1)) (a, b - 1) =
             1 + min (2 * ell (mOf k) (i, j)) (2 * ell (mOf k) (i, j - 1)) := by
-          intro _
-          have e1 : a % 2 = 1 := by omega
-          have e2 : (b - 1) % 2 = 0 := by omega
+          intro hb1
+          rw [ell]
+          dsimp only
+          rw [hm0eq]
           have e3 : a / 2 = i := by omega
           have e4 : (b - 1) / 2 - 1 = j - 1 := by omega
           have e5 : (b - 1) / 2 = j := by omega
-          conv_lhs => rw [ell]
-          dsimp only
-          rw [hm0eq]
-          rw [if_neg (by omega), if_pos (by omega)]
-          rw [e3, e4, e5]
-          ring_nf
+          split_ifs <;> first | omega | (rw [e3, e4, e5]; omega)
         have hUp : ell (mOf (k + 1)) (a, b + 1) =
             1 + min (2 * ell (mOf k) (i, j)) (2 * ell (mOf k) (i, j + 1)) := by
-          have e1 : a % 2 = 1 := by omega
-          have e2 : (b + 1) % 2 = 0 := by omega
+          rw [ell]
+          dsimp only
+          rw [hm0eq]
           have e3 : a / 2 = i := by omega
           have e4 : (b + 1) / 2 - 1 = j := by omega
           have e4' : (b + 1) / 2 = j + 1 := by omega
-          conv_lhs => rw [ell]
-          dsimp only
-          rw [hm0eq]
-          rw [if_neg (by omega), if_pos (by omega)]
-          rw [e3, e4, e4']
-          ring_nf
-        -- The transfer map: same direction, (i,j)-neighbour ↦ (a,b)-neighbour.
+          split_ifs <;> first | omega | (rw [e3, e4, e4']; omega)
+        -- The four pointwise images of f on the (at most 4) real neighbours of (i,j).
         set f : ℕ × ℕ → ℕ × ℕ := fun pq =>
           if pq.1 + 1 = i then (a - 1, b)
           else if pq.2 + 1 = j then (a, b - 1)
           else if pq.1 = i + 1 then (a + 1, b)
           else (a, b + 1) with hfdef
+        have hf1 : i ≥ 1 → f (i - 1, j) = (a - 1, b) := by
+          intro hi1; simp only [hfdef]; split_ifs <;> first | omega | rfl
+        have hf2 : j ≥ 1 → f (i, j - 1) = (a, b - 1) := by
+          intro hj1; simp only [hfdef]; split_ifs <;> first | omega | rfl
+        have hf3 : f (i + 1, j) = (a + 1, b) := by
+          simp only [hfdef]; split_ifs <;> first | omega | rfl
+        have hf4 : f (i, j + 1) = (a, b + 1) := by
+          simp only [hfdef]; split_ifs <;> first | omega | rfl
         have hmaps : ∀ p ∈ (neighbors i j).filter (fun v => ell (mOf k) v < ell (mOf k) (i, j)),
             f p ∈ (neighbors a b).filter
               (fun v => ell (mOf (k + 1)) v < 2 * ell (mOf k) (i, j)) := by
@@ -144,32 +131,18 @@ theorem three_smaller_neighbours :
           obtain ⟨hp_mem, hp_small⟩ := hp
           rw [mem_neighbors] at hp_mem
           rcases hp_mem with rfl | rfl | ⟨hi1, rfl⟩ | ⟨hj1, rfl⟩
-          · -- p = (i + 1, j)
-            have hfp : f (i + 1, j) = (a + 1, b) := by simp [hfdef]
-            rw [hfp, Finset.mem_filter, hRight]
+          · rw [hf3, Finset.mem_filter, hRight]
             refine ⟨(mem_neighbors a b _).mpr (Or.inl rfl), ?_⟩
             omega
-          · -- p = (i, j + 1)
-            have hfp : f (i, j + 1) = (a, b + 1) := by simp [hfdef]
-            rw [hfp, Finset.mem_filter, hUp]
+          · rw [hf4, Finset.mem_filter, hUp]
             refine ⟨(mem_neighbors a b _).mpr (Or.inr (Or.inl rfl)), ?_⟩
             omega
-          · -- p = (i - 1, j), i ≥ 1
-            have hfp : f (i - 1, j) = (a - 1, b) := by
-              have : i - 1 + 1 = i := by omega
-              simp [hfdef, this]
-            have ha1 : a ≥ 1 := by omega
-            rw [hfp, Finset.mem_filter, hLeft ha1]
+          · have ha1 : a ≥ 1 := by omega
+            rw [hf1 hi1, Finset.mem_filter, hLeft ha1]
             refine ⟨(mem_neighbors a b _).mpr (Or.inr (Or.inr (Or.inl ⟨ha1, rfl⟩))), ?_⟩
             omega
-          · -- p = (i, j - 1), j ≥ 1
-            have hfp : f (i, j - 1) = (a, b - 1) := by
-              have hne1 : (j - 1) + 1 = j → False := by omega
-              have hne2 : i + 1 = i → False := by omega
-              have : (j - 1) + 1 = j := by omega
-              simp [hfdef, this]
-            have hb1 : b ≥ 1 := by omega
-            rw [hfp, Finset.mem_filter, hDown hb1]
+          · have hb1 : b ≥ 1 := by omega
+            rw [hf2 hj1, Finset.mem_filter, hDown hb1]
             refine ⟨(mem_neighbors a b _).mpr (Or.inr (Or.inr (Or.inr ⟨hb1, rfl⟩))), ?_⟩
             omega
         have hinj : Set.InjOn f ↑((neighbors i j).filter
@@ -177,9 +150,12 @@ theorem three_smaller_neighbours :
           intro p hp q hq hpq
           simp only [Finset.coe_filter, Set.mem_setOf_eq] at hp hq
           rw [mem_neighbors] at hp hq
-          rcases hp.1 with rfl | rfl | ⟨hi1, rfl⟩ | ⟨hj1, rfl⟩ <;>
-            rcases hq.1 with rfl | rfl | ⟨hi1', rfl⟩ | ⟨hj1', rfl⟩ <;>
-            simp_all [hfdef] <;> omega
+          rcases hp.1 with rfl | rfl | ⟨hpi, rfl⟩ | ⟨hpj, rfl⟩ <;>
+            rcases hq.1 with rfl | rfl | ⟨hqi, rfl⟩ | ⟨hqj, rfl⟩ <;>
+            simp only [hfdef] at hpq <;>
+            simp only [Prod.mk.injEq] <;>
+            split_ifs at hpq <;>
+            omega
         have hsub : ((neighbors i j).filter
               (fun v => ell (mOf k) v < ell (mOf k) (i, j))).image f ⊆
             (neighbors a b).filter (fun v => ell (mOf (k + 1)) v < 2 * ell (mOf k) (i, j)) := by
@@ -199,28 +175,26 @@ theorem three_smaller_neighbours :
         set X := 2 * ell (mOf k) (a / 2, b / 2 - 1) with hXdef
         set Y := 2 * ell (mOf k) (a / 2, b / 2) with hYdef
         have e1 : ell (mOf (k + 1)) (a - 1, b) = 0 := by
-          conv_lhs => rw [ell]
-          dsimp only
-          rw [hm0eq, if_pos (by omega)]
+          rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
         have e2 : ell (mOf (k + 1)) (a + 1, b) = 0 := by
-          conv_lhs => rw [ell]
-          dsimp only
-          rw [hm0eq, if_pos (by omega)]
+          rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
         have ha1 : a ≥ 1 := by omega
-        have hmemL : (a - 1, b) ∈ neighbors a b := (mem_neighbors a b _).mpr (Or.inr (Or.inr (Or.inl ⟨ha1, rfl⟩)))
+        have hmemL : (a - 1, b) ∈ neighbors a b :=
+          (mem_neighbors a b _).mpr (Or.inr (Or.inr (Or.inl ⟨ha1, rfl⟩)))
         have hmemR : (a + 1, b) ∈ neighbors a b := (mem_neighbors a b _).mpr (Or.inl rfl)
         have hmemU : (a, b + 1) ∈ neighbors a b := (mem_neighbors a b _).mpr (Or.inr (Or.inl rfl))
         rcases lt_or_ge X Y with hlt | hge
-        · -- X < Y, so b ≥ 1 (else X = Y) and (a, b-1) is the third neighbour
-          have hb1 : b ≥ 1 := by
+        · have hb1 : b ≥ 1 := by
             by_contra hb0
             have hb0' : b = 0 := by omega
             rw [hXdef, hYdef, hb0'] at hlt
             simp at hlt
           have e3 : ell (mOf (k + 1)) (a, b - 1) = X := by
-            conv_lhs => rw [ell]
-            dsimp only
-            rw [hm0eq, if_neg (by omega), if_pos (by omega)]
+            rw [ell]; dsimp only; rw [hm0eq]
+            have ea : a / 2 = a / 2 := rfl
+            have eb : (b - 1) / 2 - 1 = b / 2 - 1 - 1 := by omega
+            have eb2 : (b - 1) / 2 = b / 2 - 1 := by omega
+            split_ifs <;> first | omega | (rw [eb2]; omega)
           have hmemD : (a, b - 1) ∈ neighbors a b :=
             (mem_neighbors a b _).mpr (Or.inr (Or.inr (Or.inr ⟨hb1, rfl⟩)))
           have hcard : {((a - 1, b) : ℕ × ℕ), (a + 1, b), (a, b - 1)} ⊆
@@ -238,11 +212,10 @@ theorem three_smaller_neighbours :
           calc (3 : ℕ) = ({((a - 1, b) : ℕ × ℕ), (a + 1, b), (a, b - 1)} :
                 Finset (ℕ × ℕ)).card := hcard3.symm
             _ ≤ _ := Finset.card_le_card hcard
-        · -- Y ≤ X: (a, b+1) is the third neighbour, always exists
-          have e4 : ell (mOf (k + 1)) (a, b + 1) = Y := by
-            conv_lhs => rw [ell]
-            dsimp only
-            rw [hm0eq, if_neg (by omega)]
+        · have e4 : ell (mOf (k + 1)) (a, b + 1) = Y := by
+            rw [ell]; dsimp only; rw [hm0eq]
+            have eb : (b + 1) / 2 = b / 2 := by omega
+            split_ifs <;> first | omega | (rw [eb]; omega)
           have hcard : {((a - 1, b) : ℕ × ℕ), (a + 1, b), (a, b + 1)} ⊆
               (neighbors a b).filter (fun v => ell (mOf (k+1)) v < 1 + min X Y) := by
             intro v hv
@@ -262,13 +235,9 @@ theorem three_smaller_neighbours :
         set X := 2 * ell (mOf k) (a / 2 - 1, b / 2) with hXdef
         set Y := 2 * ell (mOf k) (a / 2, b / 2) with hYdef
         have e1 : ell (mOf (k + 1)) (a, b - 1) = 0 := by
-          conv_lhs => rw [ell]
-          dsimp only
-          rw [hm0eq, if_pos (by omega)]
+          rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
         have e2 : ell (mOf (k + 1)) (a, b + 1) = 0 := by
-          conv_lhs => rw [ell]
-          dsimp only
-          rw [hm0eq, if_pos (by omega)]
+          rw [ell]; dsimp only; rw [hm0eq]; split_ifs <;> omega
         have hb1 : b ≥ 1 := by omega
         have hmemD : (a, b - 1) ∈ neighbors a b :=
           (mem_neighbors a b _).mpr (Or.inr (Or.inr (Or.inr ⟨hb1, rfl⟩)))
@@ -281,9 +250,9 @@ theorem three_smaller_neighbours :
             rw [hXdef, hYdef, ha0'] at hlt
             simp at hlt
           have e3 : ell (mOf (k + 1)) (a - 1, b) = X := by
-            conv_lhs => rw [ell]
-            dsimp only
-            rw [hm0eq, if_neg (by omega)]
+            rw [ell]; dsimp only; rw [hm0eq]
+            have ea : (a - 1) / 2 = a / 2 - 1 := by omega
+            split_ifs <;> first | omega | (rw [ea]; omega)
           have hmemL : (a - 1, b) ∈ neighbors a b :=
             (mem_neighbors a b _).mpr (Or.inr (Or.inr (Or.inl ⟨ha1, rfl⟩)))
           have hcard : {((a, b - 1) : ℕ × ℕ), (a, b + 1), (a - 1, b)} ⊆
@@ -302,9 +271,9 @@ theorem three_smaller_neighbours :
                 Finset (ℕ × ℕ)).card := hcard3.symm
             _ ≤ _ := Finset.card_le_card hcard
         · have e4 : ell (mOf (k + 1)) (a + 1, b) = Y := by
-            conv_lhs => rw [ell]
-            dsimp only
-            rw [hm0eq, if_neg (by omega)]
+            rw [ell]; dsimp only; rw [hm0eq]
+            have ea : (a + 1) / 2 = a / 2 := by omega
+            split_ifs <;> first | omega | (rw [ea]; omega)
           have hcard : {((a, b - 1) : ℕ × ℕ), (a, b + 1), (a + 1, b)} ⊆
               (neighbors a b).filter (fun v => ell (mOf (k+1)) v < 1 + min X Y) := by
             intro v hv
