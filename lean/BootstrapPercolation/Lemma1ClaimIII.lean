@@ -56,8 +56,8 @@ theorem ell_eq_zero_iff :
       dsimp only
       rw [hm0eq]
       split_ifs with hm2 he hao hoo
-      · simp
-      · simp
+      · omega
+      · omega
       · -- a, b both odd
         have key := ih (a / 2) (b / 2) (by omega)
         constructor
