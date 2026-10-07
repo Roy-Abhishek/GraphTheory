@@ -2,3 +2,6 @@ import Mathlib
 import BootstrapPercolation.Basic
 import BootstrapPercolation.MainResult
 import BootstrapPercolation.Lemma1Triangle
+import BootstrapPercolation.Lemma1ClaimI
+import BootstrapPercolation.Lemma1ClaimII
+import BootstrapPercolation.Lemma1ClaimIII

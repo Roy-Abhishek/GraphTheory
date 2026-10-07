@@ -27,19 +27,37 @@ permissions:
 # (cache is warm, so this is fast), capture its output, and emit the real error lines as
 # `::error::` workflow commands - those become ordinary check-run annotations, readable
 # through the plain REST API with no extra access needed.
+#
+# NOTE (2026-10-07): switched `build` to a matrix over individual module targets (via
+# lean-action's `build-args`, i.e. `lake build <target>`), so independent pieces (Lemma 1's
+# three claims, for now) compile as separate parallel jobs instead of one job building
+# everything serially. Each job's cache/toolchain setup is duplicated (free/unlimited on a
+# public repo) in exchange for all of them finishing in roughly one job's wall-clock time,
+# and the diagnostic step is per-target so a failure in one claim doesn't hide another's.
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - BootstrapPercolation.Basic
+          - BootstrapPercolation.MainResult
+          - BootstrapPercolation.Lemma1Triangle
+          - BootstrapPercolation.Lemma1ClaimI
+          - BootstrapPercolation.Lemma1ClaimII
+          - BootstrapPercolation.Lemma1ClaimIII
 
     steps:
       - uses: actions/checkout@v5
 
-      - name: Build Lean project
+      - name: Build ${{ matrix.target }}
         id: lean_build
         uses: leanprover/lean-action@v1
         with:
           lake-package-directory: lean
+          build-args: ${{ matrix.target }}
         continue-on-error: true
 
       - name: Surface the real Lean/lake error as annotations
@@ -47,9 +65,9 @@ jobs:
         working-directory: lean
         run: |
           set +e
-          ~/.elan/bin/lake build > /tmp/build.log 2>&1
+          ~/.elan/bin/lake build ${{ matrix.target }} > /tmp/build.log 2>&1
           set -e
-          echo "----- last 200 lines of lake build output -----"
+          echo "----- last 200 lines of lake build output (${{ matrix.target }}) -----"
           tail -n 200 /tmp/build.log
           python3 - << 'PYEOF'
           import re
