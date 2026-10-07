@@ -316,7 +316,7 @@ theorem three_smaller_neighbours :
           rcases hp.1 with rfl | rfl | ⟨hpi, rfl⟩ | ⟨hpj, rfl⟩ <;>
             rcases hq.1 with rfl | rfl | ⟨hqi, rfl⟩ | ⟨hqj, rfl⟩ <;>
             simp only [hfdef] at hpq <;>
-            split_ifs at hpq <;>
+            (try split_ifs at hpq) <;>
             simp only [Prod.mk.injEq] at hpq ⊢ <;>
             omega
         have hsub : ((neighbors i j).filter
