@@ -18,21 +18,21 @@ singleton `Hyp₀`). For `m ≥ 2`, with `m₀ = m / 2 - 1`:
 `ell m₀`. Nat truncated subtraction makes the boundary case (where one neighbour would have
 a negative coordinate) collapse to duplicating the other neighbour, matching "existing
 neighbours" automatically. -/
-def ell (m : ℕ) (p : ℕ × ℕ) : ℕ :=
-  if m < 2 then 0
-  else
-    let m₀ := m / 2 - 1
-    let a := p.1
-    let b := p.2
-    if a % 2 = 0 ∧ b % 2 = 0 then
-      0
-    else if a % 2 = 1 then
-      if b % 2 = 1 then
-        2 * ell m₀ (a / 2, b / 2)
+def ell : ℕ → ℕ × ℕ → ℕ
+  | m, (a, b) =>
+      if m < 2 then
+        0
       else
-        1 + min (2 * ell m₀ (a / 2, b / 2 - 1)) (2 * ell m₀ (a / 2, b / 2))
-    else
-      1 + min (2 * ell m₀ (a / 2 - 1, b / 2)) (2 * ell m₀ (a / 2, b / 2))
+        let m₀ := m / 2 - 1
+        if a % 2 = 0 ∧ b % 2 = 0 then
+          0
+        else if a % 2 = 1 then
+          if b % 2 = 1 then
+            2 * ell m₀ (a / 2, b / 2)
+          else
+            1 + min (2 * ell m₀ (a / 2, b / 2 - 1)) (2 * ell m₀ (a / 2, b / 2))
+        else
+          1 + min (2 * ell m₀ (a / 2 - 1, b / 2)) (2 * ell m₀ (a / 2, b / 2))
 termination_by m p => m
 decreasing_by all_goals omega
 
