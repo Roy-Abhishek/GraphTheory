@@ -281,23 +281,193 @@ lemma Sigma_incAt (u : CubeCell k) (j : Fin 3) (h : (u j : ℕ) + 1 < n k) :
   · rw [coord_incAt_other k u 2 h 0 (by decide), coord_incAt_other k u 2 h 1 (by decide),
       coord_incAt_self k u 2 h]; ring
 
-/-! The off-`Tri` case of claim 3 (`notes/log.md`: "A cell `u ∉ Tri` with `s = Σ(u) > 0`: its
-three neighbours `u − eᵢ` exist and have `Σ = s − 1`; each lies in `H` (`s = 1`), or outside
-`Tri` with `L = s − 1`, or in `Tri` with `L = ℓ_m ≤ Σ = s − 1` by Lemma 1(i)") is not yet
-written up in Lean - `decAt`/`incAt` and their `coord`/`Sigma` lemmas above are exactly the
-grid mechanics it needs (`u - eᵢ` is `decAt k u i _`, `u + eᵢ` is `incAt k u i _`); what remains
-is the case split above on whether each of the three shifted cells lands back in `Tri`, which
-needs identifying *which* face of `Tri` it can possibly land on (at most the axis just shifted,
-since `u ∉ Tri` already rules out every other coordinate being pinned) before `Lemma1ClaimI`'s
-bound applies. The on-`Tri` case (`notes/log.md`'s Lemma 1(ii) via `triCoord`, plus the
-hypotenuse-crosses-into-`H` sub-case) is the other, harder half. -/
+/-- When `w`'s pinned coordinate sits at `-m` (so, since `Σ(w) > 0`, `triCoord`'s outer
+branch - see its doc comment - takes the `-m` side), the "remaining budget" `m - a - b` that
+`Lemma1ClaimI.ell_le_remaining` bounds `ell` by works out to be exactly `Σ(w)`: whichever of
+the three axes is actually pinned, the *other two* coordinates are what `a, b` are built from,
+and their sum is `Σ(w) - (−m) - m = Σ(w)` once the pinned one (`= -m`) is subtracted out. -/
+lemma triCoord_remaining_eq_sigma_pos (w : CubeCell k)
+    (hw : ∃ i, coord k w i = -(m k : ℤ) ∧ Sigma k w > 0) :
+    (m k : ℤ) - (triCoord k w).1 - (triCoord k w).2 = Sigma k w := by
+  have hb0 := coord_bounds k w 0
+  have hb1 := coord_bounds k w 1
+  have hb2 := coord_bounds k w 2
+  have hidx : ∀ j : Fin 3, j = 0 ∨ j = 1 ∨ j = 2 := by decide
+  unfold triCoord
+  obtain ⟨i, hi, hSig⟩ := hw
+  rw [if_pos hSig]
+  unfold Sigma
+  rcases hidx i with hi3 | hi3 | hi3 <;> subst hi3 <;> split_ifs <;> omega
+
+/-- The `Σ(w) < 0` mirror of `triCoord_remaining_eq_sigma_pos` (`notes/log.md`'s `u ↦ -u`
+symmetry for the `+m` faces): the remaining budget works out to `-Σ(w)` instead. -/
+lemma triCoord_remaining_eq_sigma_neg (w : CubeCell k)
+    (hw : ∃ i, coord k w i = (m k : ℤ) ∧ Sigma k w < 0) :
+    (m k : ℤ) - (triCoord k w).1 - (triCoord k w).2 = -(Sigma k w) := by
+  have hb0 := coord_bounds k w 0
+  have hb1 := coord_bounds k w 1
+  have hb2 := coord_bounds k w 2
+  have hidx : ∀ j : Fin 3, j = 0 ∨ j = 1 ∨ j = 2 := by decide
+  unfold triCoord
+  obtain ⟨i, hi, hSig⟩ := hw
+  rw [if_neg (by omega)]
+  unfold Sigma
+  rcases hidx i with hi3 | hi3 | hi3 <;> subst hi3 <;> split_ifs <;> omega
+
+/-- Combines `Lemma1ClaimI.ell_le_remaining` with the two lemmas above: on `Tri`, `ell`'s value
+is bounded by `|Σ|`, matching one direction of `notes/log.md`'s "`L ≤ |Σ| ≤ 3m`" (the other
+direction, `L = |Σ|` off `Tri`, is immediate from `L`'s own definition). -/
+lemma ell_triCoord_le_sigma_natAbs (w : CubeCell k) (hTw : InTri k w) :
+    ell (m k) (triCoord k w) ≤ (Sigma k w).natAbs := by
+  have hsum := triCoord_sum_lt k w hTw
+  have hmeq : m k = mOf k := rfl
+  have hle := Lemma1Triangle.ell_le_remaining k (triCoord k w).1 (triCoord k w).2 (by omega)
+  have heq : ell (m k) (triCoord k w) = ell (mOf k) ((triCoord k w).1, (triCoord k w).2) := rfl
+  rcases hTw with hw | hw
+  · obtain ⟨i, hi, hsign⟩ := hw
+    have hrem := triCoord_remaining_eq_sigma_pos k w ⟨i, hi, hsign⟩
+    omega
+  · obtain ⟨i, hi, hsign⟩ := hw
+    have hrem := triCoord_remaining_eq_sigma_neg k w ⟨i, hi, hsign⟩
+    omega
+
+/-- `L` is bounded by `|Σ|` *everywhere*, not just off `Tri` (where it's equal by definition) -
+the uniform bound the off-`Tri` case of claim 3 needs below, since a shifted neighbour can land
+on either side of `Tri`'s boundary and this covers both without a case split there. -/
+lemma L_le_sigma_natAbs (w : CubeCell k) : L k w ≤ (Sigma k w).natAbs := by
+  unfold L
+  by_cases hTw : InTri k w
+  · rw [if_pos hTw]; exact ell_triCoord_le_sigma_natAbs k w hTw
+  · rw [if_neg hTw]
 
 /-- **Lemma 2, part 3.** Every cell with `L > 0` has at least 3 of its (cube-)neighbours with
 strictly smaller `L` - the hypothesis `BootstrapPercolation.certificate` needs, specialised to
-`d = 3`. -/
+`d = 3`.
+
+The off-`Tri` case (`notes/log.md`: "its three neighbours `u − eᵢ` exist and have
+`Σ = s − 1`... `L ≤ |Σ|`... so each is `< L(u)`") is proved directly below via `decAt`/`incAt`
+and `L_le_sigma_natAbs` - no need to track which face a shifted neighbour lands on, since that
+lemma bounds `L` by `|Σ|` uniformly on both sides of `Tri`'s boundary. The on-`Tri` case
+(`notes/log.md`'s Lemma 1(ii) via `triCoord`, plus the hypotenuse-crosses-into-`H` sub-case) is
+the other, harder half, still `sorry`. -/
 theorem three_smaller_neighbours (u : CubeCell k) (hu : L k u ≠ 0) :
     3 ≤ (Finset.univ.filter (fun v => adjacent u v ∧ L k v < L k u)).card := by
-  sorry
+  by_cases hTri : InTri k u
+  · sorry
+  · have hLu : L k u = (Sigma k u).natAbs := by unfold L; rw [if_neg hTri]
+    have hsne : Sigma k u ≠ 0 := by intro h; apply hu; rw [hLu, h]
+    rcases lt_or_gt_of_ne hsne with hneg | hpos
+    · have h0 : (u 0 : ℕ) + 1 < n k := by
+        by_contra hc; push_neg at hc
+        have hlt := (u 0).isLt
+        apply hTri; right; refine ⟨0, ?_, hneg⟩
+        unfold coord; unfold n at hlt hc; omega
+      have h1 : (u 1 : ℕ) + 1 < n k := by
+        by_contra hc; push_neg at hc
+        have hlt := (u 1).isLt
+        apply hTri; right; refine ⟨1, ?_, hneg⟩
+        unfold coord; unfold n at hlt hc; omega
+      have h2 : (u 2 : ℕ) + 1 < n k := by
+        by_contra hc; push_neg at hc
+        have hlt := (u 2).isLt
+        apply hTri; right; refine ⟨2, ?_, hneg⟩
+        unfold coord; unfold n at hlt hc; omega
+      have hadj0 := adjacent_incAt k u 0 h0
+      have hadj1 := adjacent_incAt k u 1 h1
+      have hadj2 := adjacent_incAt k u 2 h2
+      have hS0 := Sigma_incAt k u 0 h0
+      have hS1 := Sigma_incAt k u 1 h1
+      have hS2 := Sigma_incAt k u 2 h2
+      have hB0 := L_le_sigma_natAbs k (incAt k u 0 h0)
+      have hB1 := L_le_sigma_natAbs k (incAt k u 1 h1)
+      have hB2 := L_le_sigma_natAbs k (incAt k u 2 h2)
+      have hL0 : L k (incAt k u 0 h0) < L k u := by rw [hLu]; omega
+      have hL1 : L k (incAt k u 1 h1) < L k u := by rw [hLu]; omega
+      have hL2 : L k (incAt k u 2 h2) < L k u := by rw [hLu]; omega
+      have hv01 : incAt k u 0 h0 ≠ incAt k u 1 h1 := by
+        intro heq
+        have e0 : (incAt k u 0 h0 0 : ℕ) = (incAt k u 1 h1 0 : ℕ) := by rw [heq]
+        rw [incAt_self k u 0 h0, incAt_other k u 1 h1 0 (by decide)] at e0
+        omega
+      have hv02 : incAt k u 0 h0 ≠ incAt k u 2 h2 := by
+        intro heq
+        have e0 : (incAt k u 0 h0 0 : ℕ) = (incAt k u 2 h2 0 : ℕ) := by rw [heq]
+        rw [incAt_self k u 0 h0, incAt_other k u 2 h2 0 (by decide)] at e0
+        omega
+      have hv12 : incAt k u 1 h1 ≠ incAt k u 2 h2 := by
+        intro heq
+        have e0 : (incAt k u 1 h1 1 : ℕ) = (incAt k u 2 h2 1 : ℕ) := by rw [heq]
+        rw [incAt_self k u 1 h1, incAt_other k u 2 h2 1 (by decide)] at e0
+        omega
+      have hsub : ({incAt k u 0 h0, incAt k u 1 h1, incAt k u 2 h2} : Finset (CubeCell k)) ⊆
+          Finset.univ.filter (fun v => adjacent u v ∧ L k v < L k u) := by
+        intro v hv
+        simp only [Finset.mem_insert, Finset.mem_singleton] at hv
+        rw [Finset.mem_filter]
+        refine ⟨Finset.mem_univ v, ?_⟩
+        rcases hv with h | h | h <;> subst h
+        · exact ⟨hadj0, hL0⟩
+        · exact ⟨hadj1, hL1⟩
+        · exact ⟨hadj2, hL2⟩
+      have hcard : ({incAt k u 0 h0, incAt k u 1 h1, incAt k u 2 h2} : Finset (CubeCell k)).card = 3 := by
+        rw [Finset.card_eq_three]
+        exact ⟨_, _, _, hv01, hv02, hv12, rfl⟩
+      rw [← hcard]
+      exact Finset.card_le_card hsub
+    · have h0 : 1 ≤ (u 0 : ℕ) := by
+        rcases Nat.eq_zero_or_pos (u 0 : ℕ) with hz | hp
+        · exact absurd (Or.inl ⟨0, by unfold coord; omega, hpos⟩ : InTri k u) hTri
+        · exact hp
+      have h1 : 1 ≤ (u 1 : ℕ) := by
+        rcases Nat.eq_zero_or_pos (u 1 : ℕ) with hz | hp
+        · exact absurd (Or.inl ⟨1, by unfold coord; omega, hpos⟩ : InTri k u) hTri
+        · exact hp
+      have h2 : 1 ≤ (u 2 : ℕ) := by
+        rcases Nat.eq_zero_or_pos (u 2 : ℕ) with hz | hp
+        · exact absurd (Or.inl ⟨2, by unfold coord; omega, hpos⟩ : InTri k u) hTri
+        · exact hp
+      have hadj0 := adjacent_decAt k u 0 h0
+      have hadj1 := adjacent_decAt k u 1 h1
+      have hadj2 := adjacent_decAt k u 2 h2
+      have hS0 := Sigma_decAt k u 0 h0
+      have hS1 := Sigma_decAt k u 1 h1
+      have hS2 := Sigma_decAt k u 2 h2
+      have hB0 := L_le_sigma_natAbs k (decAt k u 0 h0)
+      have hB1 := L_le_sigma_natAbs k (decAt k u 1 h1)
+      have hB2 := L_le_sigma_natAbs k (decAt k u 2 h2)
+      have hL0 : L k (decAt k u 0 h0) < L k u := by rw [hLu]; omega
+      have hL1 : L k (decAt k u 1 h1) < L k u := by rw [hLu]; omega
+      have hL2 : L k (decAt k u 2 h2) < L k u := by rw [hLu]; omega
+      have hv01 : decAt k u 0 h0 ≠ decAt k u 1 h1 := by
+        intro heq
+        have e0 : (decAt k u 0 h0 0 : ℕ) = (decAt k u 1 h1 0 : ℕ) := by rw [heq]
+        rw [decAt_self k u 0 h0, decAt_other k u 1 h1 0 (by decide)] at e0
+        omega
+      have hv02 : decAt k u 0 h0 ≠ decAt k u 2 h2 := by
+        intro heq
+        have e0 : (decAt k u 0 h0 0 : ℕ) = (decAt k u 2 h2 0 : ℕ) := by rw [heq]
+        rw [decAt_self k u 0 h0, decAt_other k u 2 h2 0 (by decide)] at e0
+        omega
+      have hv12 : decAt k u 1 h1 ≠ decAt k u 2 h2 := by
+        intro heq
+        have e0 : (decAt k u 1 h1 1 : ℕ) = (decAt k u 2 h2 1 : ℕ) := by rw [heq]
+        rw [decAt_self k u 1 h1, decAt_other k u 2 h2 1 (by decide)] at e0
+        omega
+      have hsub : ({decAt k u 0 h0, decAt k u 1 h1, decAt k u 2 h2} : Finset (CubeCell k)) ⊆
+          Finset.univ.filter (fun v => adjacent u v ∧ L k v < L k u) := by
+        intro v hv
+        simp only [Finset.mem_insert, Finset.mem_singleton] at hv
+        rw [Finset.mem_filter]
+        refine ⟨Finset.mem_univ v, ?_⟩
+        rcases hv with h | h | h <;> subst h
+        · exact ⟨hadj0, hL0⟩
+        · exact ⟨hadj1, hL1⟩
+        · exact ⟨hadj2, hL2⟩
+      have hcard : ({decAt k u 0 h0, decAt k u 1 h1, decAt k u 2 h2} : Finset (CubeCell k)).card = 3 := by
+        rw [Finset.card_eq_three]
+        exact ⟨_, _, _, hv01, hv02, hv12, rfl⟩
+      rw [← hcard]
+      exact Finset.card_le_card hsub
 
 /-- Corollary (`notes/log.md`'s certificate, applied to `Aset`/`L`): `Aset` percolates. -/
 theorem Aset_percolates : Percolates (Aset k) :=
