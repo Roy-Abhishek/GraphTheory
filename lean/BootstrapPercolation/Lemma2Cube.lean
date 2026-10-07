@@ -485,6 +485,135 @@ lemma three_smaller_neighbours_face_neg (w : CubeCell k) (i0 j1 j2 : Fin 3)
     (hinj.mono (Finset.filter_subset _ _))
   omega
 
+/-- Mirror of `faceNegImage` for a cell pinned to `+m`: now `a = coord j1 + m` (not `m -
+coord j1`), so increasing a triangle coordinate *increases* the matching cube coordinate,
+swapping which of `incAt`/`decAt` goes with which of `(a+1,b)`/`(a-1,b)`. -/
+noncomputable def facePosImage (w : CubeCell k) (j1 j2 : Fin 3) (a b : ℕ) (p : ℕ × ℕ) :
+    CubeCell k :=
+  if p.1 = a + 1 then
+    (if h : (w j1 : ℕ) + 1 < n k then incAt k w j1 h else w)
+  else if p.2 = b + 1 then
+    (if h : (w j2 : ℕ) + 1 < n k then incAt k w j2 h else w)
+  else if p.1 + 1 = a then
+    (if h : 1 ≤ (w j1 : ℕ) then decAt k w j1 h else w)
+  else
+    (if h : 1 ≤ (w j2 : ℕ) then decAt k w j2 h else w)
+
+/-- Mirror of `three_smaller_neighbours_face_neg` for whichever axis `i0` is pinned to `+m`.
+Same structure throughout, with `incAt`/`decAt` and the sign of `Σ` swapped. -/
+lemma three_smaller_neighbours_face_pos (w : CubeCell k) (i0 j1 j2 : Fin 3)
+    (h01 : i0 ≠ j1) (h02 : i0 ≠ j2) (h12 : j1 ≠ j2)
+    (hsigeq : ∀ v : CubeCell k, Sigma k v = coord k v i0 + coord k v j1 + coord k v j2)
+    (htriv : ∀ v : CubeCell k, coord k v i0 = (m k : ℤ) → Sigma k v < 0 →
+      triCoord k v = ((coord k v j1 + (m k : ℤ)).toNat, (coord k v j2 + (m k : ℤ)).toNat))
+    (hpin : coord k w i0 = (m k : ℤ)) (hsig : Sigma k w < 0) (hu : L k w ≠ 0) :
+    3 ≤ (Finset.univ.filter (fun v => adjacent w v ∧ L k v < L k w)).card := by
+  have hTw : InTri k w := Or.inr ⟨i0, hpin, hsig⟩
+  have hb1 := coord_bounds k w j1
+  have hb2 := coord_bounds k w j2
+  have htc := htriv w hpin hsig
+  have hLw : L k w = ell (m k) (triCoord k w) := by unfold L; rw [if_pos hTw]
+  have hab_lt := triCoord_sum_lt k w hTw
+  rw [htc] at hab_lt hLw
+  have hmeq : m k = mOf k := rfl
+  have heqw : ell (m k) ((coord k w j1 + (m k : ℤ)).toNat, (coord k w j2 + (m k : ℤ)).toNat) =
+      ell (mOf k) ((coord k w j1 + (m k : ℤ)).toNat, (coord k w j2 + (m k : ℤ)).toNat) := by
+    rw [hmeq]
+  have hpos : 0 < ell (mOf k) ((coord k w j1 + (m k : ℤ)).toNat, (coord k w j2 + (m k : ℤ)).toNat) := by
+    rw [hLw, heqw] at hu; omega
+  have hLwpos : 0 < L k w := by rw [hLw, heqw]; omega
+  set a := (coord k w j1 + (m k : ℤ)).toNat with ha_def
+  set b := (coord k w j2 + (m k : ℤ)).toNat with hb_def
+  have hS := Lemma1Triangle.three_smaller_neighbours k a b (by omega) hpos
+  have hcj1 : coord k w j1 = ((w j1 : ℕ) : ℤ) - (m k : ℤ) := rfl
+  have hcj2 : coord k w j2 = ((w j2 : ℕ) : ℤ) - (m k : ℤ) := rfl
+  have haval : a = (w j1 : ℕ) := by omega
+  have hbval : b = (w j2 : ℕ) := by omega
+  have hj1inc : (w j1 : ℕ) + 1 < n k := by
+    by_contra hcon; push_neg at hcon
+    have hlt := (w j1).isLt
+    have hz : coord k w j1 = (m k : ℤ) := by unfold n at hlt hcon; omega
+    rw [hz] at ha_def; omega
+  have hj2inc : (w j2 : ℕ) + 1 < n k := by
+    by_contra hcon; push_neg at hcon
+    have hlt := (w j2).isLt
+    have hz : coord k w j2 = (m k : ℤ) := by unfold n at hlt hcon; omega
+    rw [hz] at hb_def; omega
+  have hkey : ∀ p ∈ neighbors a b,
+      coord k (facePosImage k w j1 j2 a b p) j1 = (p.1 : ℤ) - (m k : ℤ) ∧
+      coord k (facePosImage k w j1 j2 a b p) j2 = (p.2 : ℤ) - (m k : ℤ) ∧
+      coord k (facePosImage k w j1 j2 a b p) i0 = (m k : ℤ) ∧
+      adjacent w (facePosImage k w j1 j2 a b p) ∧
+      p.1 + p.2 ≤ m k := by
+    intro p hp
+    rw [mem_neighbors] at hp
+    unfold facePosImage
+    rcases hp with rfl | rfl | ⟨ha, rfl⟩ | ⟨hb, rfl⟩
+    · rw [if_pos rfl, dif_pos hj1inc]
+      refine ⟨?_, ?_, ?_, adjacent_incAt k w j1 hj1inc, by omega⟩
+      · have e := coord_incAt_self k w j1 hj1inc; push_cast; omega
+      · rw [coord_incAt_other k w j1 hj1inc j2 h12.symm]; push_cast; omega
+      · rw [coord_incAt_other k w j1 hj1inc i0 h01]; exact hpin
+    · rw [if_neg (by omega), if_pos rfl, dif_pos hj2inc]
+      refine ⟨?_, ?_, ?_, adjacent_incAt k w j2 hj2inc, by omega⟩
+      · rw [coord_incAt_other k w j2 hj2inc j1 h12]; push_cast; omega
+      · have e := coord_incAt_self k w j2 hj2inc; push_cast; omega
+      · rw [coord_incAt_other k w j2 hj2inc i0 h02]; exact hpin
+    · have hj1dec : 1 ≤ (w j1 : ℕ) := by omega
+      rw [if_neg (by omega), if_neg (by omega), if_pos (by omega), dif_pos hj1dec]
+      refine ⟨?_, ?_, ?_, adjacent_decAt k w j1 hj1dec, by omega⟩
+      · have e := coord_decAt_self k w j1 hj1dec; push_cast; omega
+      · rw [coord_decAt_other k w j1 hj1dec j2 h12.symm]; push_cast; omega
+      · rw [coord_decAt_other k w j1 hj1dec i0 h01]; exact hpin
+    · have hj2dec : 1 ≤ (w j2 : ℕ) := by omega
+      rw [if_neg (by omega), if_neg (by omega), if_neg (by omega), dif_pos hj2dec]
+      refine ⟨?_, ?_, ?_, adjacent_decAt k w j2 hj2dec, by omega⟩
+      · rw [coord_decAt_other k w j2 hj2dec j1 h12]; push_cast; omega
+      · have e := coord_decAt_self k w j2 hj2dec; push_cast; omega
+      · rw [coord_decAt_other k w j2 hj2dec i0 h02]; exact hpin
+  have hinj : Set.InjOn (facePosImage k w j1 j2 a b) (neighbors a b) := by
+    intro p hp q hq heq
+    obtain ⟨hp1, hp2, _, _, _⟩ := hkey p hp
+    obtain ⟨hq1, hq2, _, _, _⟩ := hkey q hq
+    rw [heq] at hp1 hp2
+    have e1 : p.1 = q.1 := by omega
+    have e2 : p.2 = q.2 := by omega
+    exact Prod.ext e1 e2
+  have hmapsto : ∀ p ∈ (neighbors a b).filter (fun v => ell (mOf k) v < ell (mOf k) (a, b)),
+      facePosImage k w j1 j2 a b p ∈ Finset.univ.filter (fun v => adjacent w v ∧ L k v < L k w) := by
+    intro p hp
+    rw [Finset.mem_filter] at hp
+    obtain ⟨hpmem, hplt⟩ := hp
+    obtain ⟨hcj1', hcj2', hci0, hadj, hpsum⟩ := hkey p hpmem
+    rw [Finset.mem_filter]
+    refine ⟨Finset.mem_univ _, hadj, ?_⟩
+    rcases lt_or_eq_of_le hpsum with hlt | heqm
+    · have hSigneg : Sigma k (facePosImage k w j1 j2 a b p) < 0 := by
+        rw [hsigeq]; omega
+      have htcv : triCoord k (facePosImage k w j1 j2 a b p) = (p.1, p.2) := by
+        have hbase := htriv _ hci0 hSigneg
+        rw [hbase]
+        have e1 : (coord k (facePosImage k w j1 j2 a b p) j1 + (m k : ℤ)).toNat = p.1 := by omega
+        have e2 : (coord k (facePosImage k w j1 j2 a b p) j2 + (m k : ℤ)).toNat = p.2 := by omega
+        rw [e1, e2]
+      have hivT : InTri k (facePosImage k w j1 j2 a b p) := Or.inr ⟨i0, hci0, hSigneg⟩
+      have hLv : L k (facePosImage k w j1 j2 a b p) = ell (mOf k) p := by
+        unfold L
+        rw [if_pos hivT, htcv, hmeq]
+      rw [hLv]
+      omega
+    · have hSigeq0 : Sigma k (facePosImage k w j1 j2 a b p) = 0 := by
+        rw [hsigeq]; omega
+      have hnTv : ¬ InTri k (facePosImage k w j1 j2 a b p) := by
+        rintro (⟨i, _, hs⟩ | ⟨i, _, hs⟩) <;> omega
+      have hLv0 : L k (facePosImage k w j1 j2 a b p) = 0 := by
+        unfold L; rw [if_neg hnTv, hSigeq0]; decide
+      rw [hLv0]
+      omega
+  have hcard := Finset.card_le_card_of_injOn (facePosImage k w j1 j2 a b) hmapsto
+    (hinj.mono (Finset.filter_subset _ _))
+  omega
+
 /-- **Lemma 2, part 3.** Every cell with `L > 0` has at least 3 of its (cube-)neighbours with
 strictly smaller `L` - the hypothesis `BootstrapPercolation.certificate` needs, specialised to
 `d = 3`.
