@@ -165,13 +165,15 @@ theorem L_le_three_m (u : CubeCell k) : L k u ≤ 3 * m k := by
   by_cases hTri : InTri k u
   · rw [if_pos hTri]
     have hab := triCoord_sum_lt k u hTri
-    have hle := Lemma1Triangle.ell_le_remaining k (triCoord k u).1 (triCoord k u).2 (by omega)
-    -- `m k` is definitionally `mOf k`, and `triCoord k u` is definitionally the pair of its own
-    -- components, but neither is *syntactically* so - omega treats `ell (m k) (triCoord k u)`
-    -- and `ell (mOf k) ((triCoord k u).1, (triCoord k u).2)` (hle's LHS) as unrelated opaque
-    -- atoms unless handed the bridging equations directly, as plain `rfl` facts.
-    have heq : ell (m k) (triCoord k u) = ell (mOf k) ((triCoord k u).1, (triCoord k u).2) := rfl
+    -- `m k` is definitionally `mOf k` (needed *before* `ell_le_remaining`'s own hypothesis
+    -- below, which is itself discharged by `omega` and needs this bridge too), and
+    -- `triCoord k u` is definitionally the pair of its own components - neither is
+    -- *syntactically* so, so omega treats `ell (m k) (triCoord k u)` and
+    -- `ell (mOf k) ((triCoord k u).1, (triCoord k u).2)` (hle's LHS) as unrelated opaque atoms
+    -- unless handed the bridging equations directly, as plain `rfl` facts.
     have hmeq : m k = mOf k := rfl
+    have hle := Lemma1Triangle.ell_le_remaining k (triCoord k u).1 (triCoord k u).2 (by omega)
+    have heq : ell (m k) (triCoord k u) = ell (mOf k) ((triCoord k u).1, (triCoord k u).2) := rfl
     omega
   · rw [if_neg hTri]
     unfold Sigma
@@ -191,7 +193,8 @@ lemma adjacent_of_eq_succ_at (u v : CubeCell k) (j : Fin 3)
   have key : ∀ i, i ≠ j → (((u i : ℕ) : ℤ) - ((v i : ℕ) : ℤ)).natAbs = 0 := by
     intro i hi; have := hother i hi; omega
   have keyj : (((u j : ℕ) : ℤ) - ((v j : ℕ) : ℤ)).natAbs = 1 := by omega
-  fin_cases j
+  have hidx : ∀ j' : Fin 3, j' = 0 ∨ j' = 1 ∨ j' = 2 := by decide
+  rcases hidx j with hj3 | hj3 | hj3 <;> subst hj3
   · have e1 := key 1 (by decide)
     have e2 := key 2 (by decide)
     omega
@@ -230,8 +233,9 @@ lemma coord_decAt_other (u : CubeCell k) (j : Fin 3) (h : 1 ≤ (u j : ℕ)) (i 
 
 lemma Sigma_decAt (u : CubeCell k) (j : Fin 3) (h : 1 ≤ (u j : ℕ)) :
     Sigma k (decAt k u j h) = Sigma k u - 1 := by
+  have hidx : ∀ j' : Fin 3, j' = 0 ∨ j' = 1 ∨ j' = 2 := by decide
   unfold Sigma
-  fin_cases j
+  rcases hidx j with hj3 | hj3 | hj3 <;> subst hj3
   · rw [coord_decAt_self k u 0 h, coord_decAt_other k u 0 h 1 (by decide),
       coord_decAt_other k u 0 h 2 (by decide)]; ring
   · rw [coord_decAt_other k u 1 h 0 (by decide), coord_decAt_self k u 1 h,
@@ -267,8 +271,9 @@ lemma coord_incAt_other (u : CubeCell k) (j : Fin 3) (h : (u j : ℕ) + 1 < n k)
 
 lemma Sigma_incAt (u : CubeCell k) (j : Fin 3) (h : (u j : ℕ) + 1 < n k) :
     Sigma k (incAt k u j h) = Sigma k u + 1 := by
+  have hidx : ∀ j' : Fin 3, j' = 0 ∨ j' = 1 ∨ j' = 2 := by decide
   unfold Sigma
-  fin_cases j
+  rcases hidx j with hj3 | hj3 | hj3 <;> subst hj3
   · rw [coord_incAt_self k u 0 h, coord_incAt_other k u 0 h 1 (by decide),
       coord_incAt_other k u 0 h 2 (by decide)]; ring
   · rw [coord_incAt_other k u 1 h 0 (by decide), coord_incAt_self k u 1 h,
