@@ -151,7 +151,125 @@ theorem L_eq_zero_iff (u : CubeCell k) : L k u = 0 ↔ u ∈ Aset k := by
 the corners"). This is all the certificate corollary below needs; the matching equality case
 (a corner cell with `L = 3m`) is not needed for the upper bound and is deferred. -/
 theorem L_le_three_m (u : CubeCell k) : L k u ≤ 3 * m k := by
-  sorry
+  unfold L
+  by_cases hTri : InTri k u
+  · rw [if_pos hTri]
+    have hab := triCoord_sum_lt k u hTri
+    have hle := Lemma1Triangle.ell_le_remaining k (triCoord k u).1 (triCoord k u).2 (by omega)
+    omega
+  · rw [if_neg hTri]
+    unfold Sigma
+    have hb0 := coord_bounds k u 0
+    have hb1 := coord_bounds k u 1
+    have hb2 := coord_bounds k u 2
+    omega
+
+/-- If `u` and `v` agree off a single index `j`, and differ there by exactly `1`, they are
+grid-adjacent. The one genuinely case-heavy step (which of the three `Fin 3` indices `j` is)
+is isolated here so `decAt`/`incAt` below can both reuse it directly. -/
+lemma adjacent_of_eq_succ_at (u v : CubeCell k) (j : Fin 3)
+    (hj : (u j : ℕ) = (v j : ℕ) + 1 ∨ (v j : ℕ) = (u j : ℕ) + 1)
+    (hother : ∀ i, i ≠ j → (u i : ℕ) = (v i : ℕ)) : adjacent u v := by
+  unfold adjacent mdist
+  rw [Fin.sum_univ_three]
+  have key : ∀ i, i ≠ j → (((u i : ℕ) : ℤ) - ((v i : ℕ) : ℤ)).natAbs = 0 := by
+    intro i hi; have := hother i hi; omega
+  have keyj : (((u j : ℕ) : ℤ) - ((v j : ℕ) : ℤ)).natAbs = 1 := by omega
+  fin_cases j
+  · have e1 := key 1 (by decide)
+    have e2 := key 2 (by decide)
+    omega
+  · have e1 := key 0 (by decide)
+    have e2 := key 2 (by decide)
+    omega
+  · have e1 := key 0 (by decide)
+    have e2 := key 1 (by decide)
+    omega
+
+/-- `u` with its `j`-th grid coordinate decreased by `1`, when that stays `≥ 0`. -/
+def decAt (u : CubeCell k) (j : Fin 3) (h : 1 ≤ (u j : ℕ)) : CubeCell k :=
+  fun i => if i = j then (⟨(u j : ℕ) - 1, by have := (u j).isLt; omega⟩ : Fin (n k)) else u i
+
+lemma decAt_self (u : CubeCell k) (j : Fin 3) (h : 1 ≤ (u j : ℕ)) :
+    ((decAt k u j h) j : ℕ) = (u j : ℕ) - 1 := by
+  unfold decAt; rw [if_pos rfl]
+
+lemma decAt_other (u : CubeCell k) (j : Fin 3) (h : 1 ≤ (u j : ℕ)) (i : Fin 3) (hij : i ≠ j) :
+    (decAt k u j h) i = u i := by
+  unfold decAt; rw [if_neg hij]
+
+lemma adjacent_decAt (u : CubeCell k) (j : Fin 3) (h : 1 ≤ (u j : ℕ)) :
+    adjacent u (decAt k u j h) := by
+  apply adjacent_of_eq_succ_at k u (decAt k u j h) j
+  · left; rw [decAt_self k u j h]; omega
+  · intro i hi; rw [decAt_other k u j h i hi]
+
+lemma coord_decAt_self (u : CubeCell k) (j : Fin 3) (h : 1 ≤ (u j : ℕ)) :
+    coord k (decAt k u j h) j = coord k u j - 1 := by
+  unfold coord; have e := decAt_self k u j h; omega
+
+lemma coord_decAt_other (u : CubeCell k) (j : Fin 3) (h : 1 ≤ (u j : ℕ)) (i : Fin 3)
+    (hij : i ≠ j) : coord k (decAt k u j h) i = coord k u i := by
+  unfold coord; rw [decAt_other k u j h i hij]
+
+lemma Sigma_decAt (u : CubeCell k) (j : Fin 3) (h : 1 ≤ (u j : ℕ)) :
+    Sigma k (decAt k u j h) = Sigma k u - 1 := by
+  unfold Sigma
+  fin_cases j
+  · rw [coord_decAt_self k u 0 h, coord_decAt_other k u 0 h 1 (by decide),
+      coord_decAt_other k u 0 h 2 (by decide)]; ring
+  · rw [coord_decAt_other k u 1 h 0 (by decide), coord_decAt_self k u 1 h,
+      coord_decAt_other k u 1 h 2 (by decide)]; ring
+  · rw [coord_decAt_other k u 2 h 0 (by decide), coord_decAt_other k u 2 h 1 (by decide),
+      coord_decAt_self k u 2 h]; ring
+
+/-- `u` with its `j`-th grid coordinate increased by `1`, when that stays `< n`. -/
+def incAt (u : CubeCell k) (j : Fin 3) (h : (u j : ℕ) + 1 < n k) : CubeCell k :=
+  fun i => if i = j then (⟨(u j : ℕ) + 1, h⟩ : Fin (n k)) else u i
+
+lemma incAt_self (u : CubeCell k) (j : Fin 3) (h : (u j : ℕ) + 1 < n k) :
+    ((incAt k u j h) j : ℕ) = (u j : ℕ) + 1 := by
+  unfold incAt; rw [if_pos rfl]
+
+lemma incAt_other (u : CubeCell k) (j : Fin 3) (h : (u j : ℕ) + 1 < n k) (i : Fin 3)
+    (hij : i ≠ j) : (incAt k u j h) i = u i := by
+  unfold incAt; rw [if_neg hij]
+
+lemma adjacent_incAt (u : CubeCell k) (j : Fin 3) (h : (u j : ℕ) + 1 < n k) :
+    adjacent u (incAt k u j h) := by
+  apply adjacent_of_eq_succ_at k u (incAt k u j h) j
+  · right; rw [incAt_self k u j h]
+  · intro i hi; rw [incAt_other k u j h i hi]
+
+lemma coord_incAt_self (u : CubeCell k) (j : Fin 3) (h : (u j : ℕ) + 1 < n k) :
+    coord k (incAt k u j h) j = coord k u j + 1 := by
+  unfold coord; have e := incAt_self k u j h; omega
+
+lemma coord_incAt_other (u : CubeCell k) (j : Fin 3) (h : (u j : ℕ) + 1 < n k) (i : Fin 3)
+    (hij : i ≠ j) : coord k (incAt k u j h) i = coord k u i := by
+  unfold coord; rw [incAt_other k u j h i hij]
+
+lemma Sigma_incAt (u : CubeCell k) (j : Fin 3) (h : (u j : ℕ) + 1 < n k) :
+    Sigma k (incAt k u j h) = Sigma k u + 1 := by
+  unfold Sigma
+  fin_cases j
+  · rw [coord_incAt_self k u 0 h, coord_incAt_other k u 0 h 1 (by decide),
+      coord_incAt_other k u 0 h 2 (by decide)]; ring
+  · rw [coord_incAt_other k u 1 h 0 (by decide), coord_incAt_self k u 1 h,
+      coord_incAt_other k u 1 h 2 (by decide)]; ring
+  · rw [coord_incAt_other k u 2 h 0 (by decide), coord_incAt_other k u 2 h 1 (by decide),
+      coord_incAt_self k u 2 h]; ring
+
+/-! The off-`Tri` case of claim 3 (`notes/log.md`: "A cell `u ∉ Tri` with `s = Σ(u) > 0`: its
+three neighbours `u − eᵢ` exist and have `Σ = s − 1`; each lies in `H` (`s = 1`), or outside
+`Tri` with `L = s − 1`, or in `Tri` with `L = ℓ_m ≤ Σ = s − 1` by Lemma 1(i)") is not yet
+written up in Lean - `decAt`/`incAt` and their `coord`/`Sigma` lemmas above are exactly the
+grid mechanics it needs (`u - eᵢ` is `decAt k u i _`, `u + eᵢ` is `incAt k u i _`); what remains
+is the case split above on whether each of the three shifted cells lands back in `Tri`, which
+needs identifying *which* face of `Tri` it can possibly land on (at most the axis just shifted,
+since `u ∉ Tri` already rules out every other coordinate being pinned) before `Lemma1ClaimI`'s
+bound applies. The on-`Tri` case (`notes/log.md`'s Lemma 1(ii) via `triCoord`, plus the
+hypotenuse-crosses-into-`H` sub-case) is the other, harder half. -/
 
 /-- **Lemma 2, part 3.** Every cell with `L > 0` has at least 3 of its (cube-)neighbours with
 strictly smaller `L` - the hypothesis `BootstrapPercolation.certificate` needs, specialised to
