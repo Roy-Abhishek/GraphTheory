@@ -64,20 +64,28 @@ def InTri (u : CubeCell k) : Prop :=
 /-- The in-plane triangle coordinates of a cell of `Tri`, one case per face, matching
 `notes/log.md`'s "for the face `u₁ = −m`: `a = m−u₂, b = m−u₃`" (and, by the `u ↦ −u` symmetry
 noted there for the `Σ < 0` faces, `a = u_j + m` off the pinned coordinate). Defined on all of
-`CubeCell k` for convenience (junk value off `Tri`); only its values on `Tri` are ever used. -/
+`CubeCell k` for convenience (junk value off `Tri`); only its values on `Tri` are ever used.
+
+Branches first on `Σ`'s sign, *then* which axis is pinned - not the other way around. Two
+coordinates can sit at opposite extremes simultaneously (e.g. `u₀ = -m`, `u₂ = +m`, an edge
+where two corner faces of the cube meet), and `InTri`'s own two disjuncts are already keyed on
+`Σ`'s sign; checking `-m` conditions before any `+m` condition regardless of sign picked the
+wrong face on exactly such edges, producing an `(a, b)` whose sum isn't `< m` after all. -/
 noncomputable def triCoord (u : CubeCell k) : ℕ × ℕ :=
-  if coord k u 0 = -(m k : ℤ) then
-    (((m k : ℤ) - coord k u 1).toNat, ((m k : ℤ) - coord k u 2).toNat)
-  else if coord k u 1 = -(m k : ℤ) then
-    (((m k : ℤ) - coord k u 0).toNat, ((m k : ℤ) - coord k u 2).toNat)
-  else if coord k u 2 = -(m k : ℤ) then
-    (((m k : ℤ) - coord k u 0).toNat, ((m k : ℤ) - coord k u 1).toNat)
-  else if coord k u 0 = (m k : ℤ) then
-    ((coord k u 1 + (m k : ℤ)).toNat, (coord k u 2 + (m k : ℤ)).toNat)
-  else if coord k u 1 = (m k : ℤ) then
-    ((coord k u 0 + (m k : ℤ)).toNat, (coord k u 2 + (m k : ℤ)).toNat)
+  if Sigma k u > 0 then
+    if coord k u 0 = -(m k : ℤ) then
+      (((m k : ℤ) - coord k u 1).toNat, ((m k : ℤ) - coord k u 2).toNat)
+    else if coord k u 1 = -(m k : ℤ) then
+      (((m k : ℤ) - coord k u 0).toNat, ((m k : ℤ) - coord k u 2).toNat)
+    else
+      (((m k : ℤ) - coord k u 0).toNat, ((m k : ℤ) - coord k u 1).toNat)
   else
-    ((coord k u 0 + (m k : ℤ)).toNat, (coord k u 1 + (m k : ℤ)).toNat)
+    if coord k u 0 = (m k : ℤ) then
+      ((coord k u 1 + (m k : ℤ)).toNat, (coord k u 2 + (m k : ℤ)).toNat)
+    else if coord k u 1 = (m k : ℤ) then
+      ((coord k u 0 + (m k : ℤ)).toNat, (coord k u 2 + (m k : ℤ)).toNat)
+    else
+      ((coord k u 0 + (m k : ℤ)).toNat, (coord k u 1 + (m k : ℤ)).toNat)
 
 /-- The single witness function for the whole cube (`notes/log.md`'s `L`): `ell m (triCoord u)`
 on `Tri`, `|Σ(u)|` off it. -/
@@ -99,25 +107,26 @@ lemma coord_bounds (u : CubeCell k) (i : Fin 3) :
   omega
 
 /-- A cell of `Tri` always lands in `Δ_m`'s domain: its triangle coordinates sum to
-strictly less than `m`. The six cases (which coordinate is pinned, to `-m` or `+m`) are
-handled uniformly: `split_ifs` on `triCoord`'s own six branches, together with the pinned
-coordinate's identity and `Σ`'s sign, either contradicts the branch actually taken (so the
-coordinate pinned is *not* the one that branch assumes - via `coord_bounds` forcing the other
-two coordinates too far from the extreme for `Σ` to have the needed sign) or gives the bound
-directly. -/
+strictly less than `m`. `triCoord`'s outer branch (on `Σ`'s sign) is resolved first, directly
+from `hSig` - this is what rules out the problematic "two opposite extremes at once" edge case
+(see `triCoord`'s doc comment). Within the matching sign, the inner 3-way split on which axis is
+pinned is handled uniformly: either it contradicts the branch actually taken (`coord_bounds`
+forcing the other two coordinates too far from the extreme for `Σ` to have the needed sign,
+*now* always within a single, consistent sign), or it gives the bound directly. -/
 lemma triCoord_sum_lt (u : CubeCell k) (hTri : InTri k u) :
     (triCoord k u).1 + (triCoord k u).2 < m k := by
   have hb0 := coord_bounds k u 0
   have hb1 := coord_bounds k u 1
   have hb2 := coord_bounds k u 2
-  unfold triCoord
   have hidx : ∀ j : Fin 3, j = 0 ∨ j = 1 ∨ j = 2 := by decide
-  rcases hTri with ⟨i, hi, hSig⟩ | ⟨i, hi, hSig⟩ <;>
-    unfold Sigma at hSig <;>
-    rcases hidx i with hi3 | hi3 | hi3 <;>
-    subst hi3 <;>
-    split_ifs <;>
-    omega
+  unfold triCoord
+  rcases hTri with ⟨i, hi, hSig⟩ | ⟨i, hi, hSig⟩
+  · rw [if_pos hSig]
+    unfold Sigma at hSig
+    rcases hidx i with hi3 | hi3 | hi3 <;> subst hi3 <;> split_ifs <;> omega
+  · rw [if_neg (by omega)]
+    unfold Sigma at hSig
+    rcases hidx i with hi3 | hi3 | hi3 <;> subst hi3 <;> split_ifs <;> omega
 
 /-- **Lemma 2, part 1.** `L` vanishes exactly on `Aset`. -/
 theorem L_eq_zero_iff (u : CubeCell k) : L k u = 0 ↔ u ∈ Aset k := by
@@ -157,6 +166,12 @@ theorem L_le_three_m (u : CubeCell k) : L k u ≤ 3 * m k := by
   · rw [if_pos hTri]
     have hab := triCoord_sum_lt k u hTri
     have hle := Lemma1Triangle.ell_le_remaining k (triCoord k u).1 (triCoord k u).2 (by omega)
+    -- `m k` is definitionally `mOf k`, and `triCoord k u` is definitionally the pair of its own
+    -- components, but neither is *syntactically* so - omega treats `ell (m k) (triCoord k u)`
+    -- and `ell (mOf k) ((triCoord k u).1, (triCoord k u).2)` (hle's LHS) as unrelated opaque
+    -- atoms unless handed the bridging equations directly, as plain `rfl` facts.
+    have heq : ell (m k) (triCoord k u) = ell (mOf k) ((triCoord k u).1, (triCoord k u).2) := rfl
+    have hmeq : m k = mOf k := rfl
     omega
   · rw [if_neg hTri]
     unfold Sigma
